@@ -14,7 +14,7 @@ export default function EmMigracao({ chave, nome }){
         <div className="ic-arq doc">{etapa.replace('Etapa ', 'E')}</div>
         <h3>{nome} — em migração para a nova versão</h3>
         <p>{txt}</p>
-        <p className="dica">Esta parte está sendo convertida para React com o banco de dados on-line ({etapa}). Os dados já importados do sistema anterior ficam guardados no banco e aparecem aqui quando a tela estiver pronta.</p>
+        <p className="dica">Esta parte está sendo preparada para a versão on-line ({etapa}). Em breve estará disponível aqui.</p>
       </div>
     </section>
   );

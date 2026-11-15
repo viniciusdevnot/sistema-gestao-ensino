@@ -15,7 +15,9 @@ function Conteudo(){
   const { sessao, perfil, ehAdmin, ehOficial, registrar } = useSessao();
   const [view, setView] = useState(() => (location.hash || '#painel').slice(1));
   const [tags, setTags] = useState({});
-  const ir = v => { setView(v); history.replaceState(null, '', '#' + v); };
+  const ir = v => { if (v === view) return; setView(v); history.pushState(null, '', '#' + v); window.scrollTo(0, 0); };
+  // botão "voltar" do celular/navegador volta para a tela anterior
+  useEffect(() => { const f = () => setView((location.hash || '#painel').slice(1)); addEventListener('popstate', f); addEventListener('hashchange', f); return () => { removeEventListener('popstate', f); removeEventListener('hashchange', f); }; }, []);
   useEffect(() => { if (/^dm-pr-/.test(view) && perfil && !ehOficial) ir('painel'); if ((view === 'registros') && perfil && !ehAdmin) ir('painel'); }, [view, perfil, ehAdmin, ehOficial]);
   // registra o acesso e o último acesso
   useEffect(() => { if (!perfil) return; api.salvarPerfil(perfil.id, { ultimo_acesso: new Date().toISOString() }).catch(() => {}); registrar('acesso', 'entrou no sistema'); }, [perfil?.id]);

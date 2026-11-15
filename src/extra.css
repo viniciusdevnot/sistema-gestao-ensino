@@ -15,3 +15,14 @@
 .campos-form .tp-cat label{flex:1;display:flex;gap:9px;align-items:flex-start;margin:0;font-weight:400;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
 .campos-form .tp-cat label:has(input:checked){border-color:var(--acc);background:var(--acc2)}
 .campos-form .tp-acoes{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+
+/* celular */
+.rolar-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media (max-width:900px){
+  .kpis{grid-template-columns:1fr 1fr;gap:10px}
+  .kpi{padding:12px;gap:10px}
+  .tabela-reg{min-width:560px}
+  input,select,textarea{font-size:16px} /* evita o zoom automático do iPhone ao tocar no campo */
+  .btn{min-height:38px}
+}
+@media (max-width:360px){.kpis{grid-template-columns:1fr}}

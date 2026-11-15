@@ -19,8 +19,8 @@ export default function Registros(){
           </select>
         </div>
         {!lista ? <div className="vazio">Carregando…</div> : !lista.length ? <div className="vazio">Nenhum registro.</div> : (
-          <table className="tabela-reg"><thead><tr><th>Quando</th><th>Quem</th><th>Tipo</th><th>O que fez</th></tr></thead>
-            <tbody>{lista.map(r => <tr key={r.id} className={visto && r.quando > visto ? 'novo' : ''}><td style={{ whiteSpace: 'nowrap' }}>{dataHora(r.quando)}</td><td>{r.quem}</td><td><span className="tg">{r.tipo}</span></td><td>{r.acao}</td></tr>)}</tbody></table>)}
+          <div className="rolar-x"><table className="tabela-reg"><thead><tr><th>Quando</th><th>Quem</th><th>Tipo</th><th>O que fez</th></tr></thead>
+            <tbody>{lista.map(r => <tr key={r.id} className={visto && r.quando > visto ? 'novo' : ''}><td style={{ whiteSpace: 'nowrap' }}>{dataHora(r.quando)}</td><td>{r.quem}</td><td><span className="tg">{r.tipo}</span></td><td>{r.acao}</td></tr>)}</tbody></table></div>)}
       </div>
     </section>
   );
