@@ -6,7 +6,7 @@ import { CAT_DOCM, CAT_PROC } from '../lib/catalogo.js';
 
 const abertoSalvo = k => { try { return localStorage.getItem(k) === '1'; } catch { return false; } };
 
-export default function Layout({ view, ir, titulo, sub, tags = {}, children }){
+export default function Layout({ view, ir, titulo, sub, tags = {}, abrirGuia, children }){
   const { perfil, ehAdmin, ehOficial, status, sair, setPerfil } = useSessao();
   const [recolhido, setRecolhido] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
@@ -57,6 +57,7 @@ export default function Layout({ view, ir, titulo, sub, tags = {}, children }){
         </>}
         {item('planilhas', 'Planilhas', 'tabela', tags.planilhas ?? 0)}
         <div className="grupo">Sistema</div>
+        <a href="#" className="nav-guia" title="Guia do sistema" onClick={e => { e.preventDefault(); setMenuAberto(false); abrirGuia?.(); }}><Ic n="livro" t={20} /><span>Guia do sistema</span></a>
         {ehAdmin && item('registros', 'Registros', 'lista')}
         {item('perfil', 'Meu perfil', 'user')}
       </nav>

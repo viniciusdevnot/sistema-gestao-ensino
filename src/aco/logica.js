@@ -462,3 +462,6 @@ export function tempoRestante(e){
   const h = Math.floor(ms / 36e5), m = Math.floor(ms % 36e5 / 6e4);
   return 'some em ' + (h ? `${h}h${String(m).padStart(2, '0')}` : `${m} min`);
 }
+
+// só no ambiente de teste (prints do guia): permite montar dados fictícios
+if (import.meta.env?.MODE === 'teste') globalThis.__sgeAco = { est, efetivoPessoas, norm, analisarACO };

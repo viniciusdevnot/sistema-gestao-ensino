@@ -11,11 +11,15 @@ import Registros from './telas/Registros.jsx';
 import EmMigracao from './telas/EmMigracao.jsx';
 import Aco from './telas/Aco.jsx';
 import Documentos from './telas/Documentos.jsx';
+import Planilhas from './telas/Planilhas.jsx';
+import Guia from './componentes/Guia.jsx';
+import { GUIA_VERSAO } from './lib/guia.js';
 import { zerarDocumentos } from './legado/ponte.js';
 import { VIEWS, CAT_DOCM, CAT_PROC } from './lib/catalogo.js';
 
 function Conteudo(){
-  const { sessao, perfil, ehAdmin, ehOficial, registrar } = useSessao();
+  const { sessao, perfil, setPerfil, ehAdmin, ehOficial, registrar, avisar } = useSessao();
+  const [guia, setGuia] = useState(null);   // {cap} quando aberto
   const [view, setView] = useState(() => (location.hash || '#painel').slice(1));
   const [tags, setTags] = useState({});
   const ir = v => { if (v === view) return; setView(v); history.pushState(null, '', '#' + v); window.scrollTo(0, 0); };
@@ -27,7 +31,21 @@ function Conteudo(){
   useEffect(() => { if (!perfil) return; const id = ehAdmin ? undefined : perfil.id;
     Promise.all(['escalas_aco', 'oficios', 'ordens_servico', 'planilhas'].map(t => api.contar(t, id).catch(() => 0))).then(([aco, oficio, os, planilhas]) => setTags({ aco, oficio, os, planilhas })); }, [perfil?.id, view]);
 
-  useEffect(() => { if (sessao === null) zerarDocumentos(); }, [sessao]);
+  useEffect(() => { if (sessao === null){ zerarDocumentos(); setGuia(null); } }, [sessao]);
+  // guia: abre sozinho no 1º acesso de cada perfil
+  useEffect(() => {
+    if (!perfil || perfil.trocar_senha) return;
+    if (!perfil.guia_visto){ const t = setTimeout(() => setGuia({ cap: 0 }), 700); return () => clearTimeout(t); }
+    if ((perfil.guia_ver || 0) < GUIA_VERSAO) api.salvarPerfil(perfil.id, { guia_ver: GUIA_VERSAO }).catch(() => {});
+  }, [perfil?.id, perfil?.trocar_senha]);
+  const fecharGuia = concluiu => {
+    setGuia(null);
+    if (perfil && (!perfil.guia_visto || (perfil.guia_ver || 0) < GUIA_VERSAO)){
+      const campos = { guia_visto: perfil.guia_visto || new Date().toISOString(), guia_ver: GUIA_VERSAO };
+      setPerfil({ ...perfil, ...campos }); api.salvarPerfil(perfil.id, campos).catch(() => {});
+    }
+    if (concluiu){ registrar('perfil', 'concluiu o Guia do sistema'); avisar('Guia concluído. Bom trabalho!'); }
+  };
   if (sessao === undefined) return <div className="carregando-tela">Carregando…</div>;
   if (!sessao) return <Acesso key="entrar" />;
   if (!perfil) return <div className="carregando-tela">Carregando seu perfil…</div>;
@@ -44,8 +62,12 @@ function Conteudo(){
     tela = <Documentos view={view} ir={ir} />;
   }
   else if (view === 'oficio' || view === 'os') tela = <Documentos view={view} ir={ir} />;
+  else if (view === 'planilhas') tela = <Planilhas />;
   else tela = <EmMigracao chave={view} nome={tit[0]} />;
-  return <Layout view={view} ir={ir} titulo={tit[0]} sub={tit[1]} tags={tags}>{tela}</Layout>;
+  return (<>
+    <Layout view={view} ir={ir} titulo={tit[0]} sub={tit[1]} tags={tags} abrirGuia={() => setGuia({ cap: 0 })}>{tela}</Layout>
+    {guia && <Guia ehOficial={ehOficial} ehAdmin={ehAdmin} capInicial={guia.cap} fechar={fecharGuia} />}
+  </>);
 }
 
 export default function App(){

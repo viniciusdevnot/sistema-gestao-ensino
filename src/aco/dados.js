@@ -81,3 +81,6 @@ export async function gravarHistorico(e){
 export async function gravarConfig(chave, valor, perfilId){
   const { error } = await sb.from('configuracoes').upsert({ chave, valor, alterado_em: new Date().toISOString(), alterado_por: perfilId }); falha(error);
 }
+
+// só no ambiente de teste (prints do guia)
+if (import.meta.env?.MODE === 'teste') globalThis.__sgeAcoDados = { gravarConfig };
