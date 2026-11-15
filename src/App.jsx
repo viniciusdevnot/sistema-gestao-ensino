@@ -10,6 +10,8 @@ import MeuPerfil from './telas/MeuPerfil.jsx';
 import Registros from './telas/Registros.jsx';
 import EmMigracao from './telas/EmMigracao.jsx';
 import Aco from './telas/Aco.jsx';
+import Documentos from './telas/Documentos.jsx';
+import { zerarDocumentos } from './legado/ponte.js';
 import { VIEWS, CAT_DOCM, CAT_PROC } from './lib/catalogo.js';
 
 function Conteudo(){
@@ -25,6 +27,7 @@ function Conteudo(){
   useEffect(() => { if (!perfil) return; const id = ehAdmin ? undefined : perfil.id;
     Promise.all(['escalas_aco', 'oficios', 'ordens_servico', 'planilhas'].map(t => api.contar(t, id).catch(() => 0))).then(([aco, oficio, os, planilhas]) => setTags({ aco, oficio, os, planilhas })); }, [perfil?.id, view]);
 
+  useEffect(() => { if (sessao === null) zerarDocumentos(); }, [sessao]);
   if (sessao === undefined) return <div className="carregando-tela">Carregando…</div>;
   if (!sessao) return <Acesso key="entrar" />;
   if (!perfil) return <div className="carregando-tela">Carregando seu perfil…</div>;
@@ -38,8 +41,9 @@ function Conteudo(){
   else if (/^dm-/.test(view)){
     const k = view.slice(3), p = CAT_PROC.find(c => c[0] === k), d = CAT_DOCM.find(c => c[0] === k);
     tit = p ? [`${p[2]} · ${p[1]}`, 'Procedimentos · Manual de Processos e Procedimentos Administrativos (MPPADMIS)'] : [d?.[1] || 'Documentos', VIEWS.docm[1]];
-    tela = <EmMigracao chave="docm" nome={tit[0]} />;
+    tela = <Documentos view={view} ir={ir} />;
   }
+  else if (view === 'oficio' || view === 'os') tela = <Documentos view={view} ir={ir} />;
   else tela = <EmMigracao chave={view} nome={tit[0]} />;
   return <Layout view={view} ir={ir} titulo={tit[0]} sub={tit[1]} tags={tags}>{tela}</Layout>;
 }
