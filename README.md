@@ -18,12 +18,12 @@ O código fica num repositório **privado** no GitHub. Toda alteração enviada 
 ### 3. Netlify (hospedagem)
 1. Em <https://app.netlify.com>: **Add new site › Import an existing project › GitHub** e escolha o repositório.
    As configurações de build vêm do arquivo `netlify.toml` (não precisa mudar nada).
-2. **Site configuration › Environment variables** — cadastre:
+2. **Site configuration › Environment variables** — cadastre só **uma** variável:
    | Variável | Valor |
    |---|---|
-   | `VITE_SUPABASE_URL` | Project URL do Supabase |
-   | `VITE_SUPABASE_ANON_KEY` | chave anon public |
-   | `SUPABASE_SERVICE_ROLE_KEY` | chave service_role (**só aqui; nunca no código**) |
+   | `SUPABASE_SERVICE_ROLE_KEY` | a chave **secret** do Supabase (`sb_secret_…`) — **só aqui; nunca no código** |
+
+   O endereço do projeto e a chave pública (publishable) já estão no código (`src/lib/supabase.js`).
 3. **Deploys › Trigger deploy**. Depois disso, cada atualização no GitHub publica sozinha.
 
 ### 4. Primeiro acesso

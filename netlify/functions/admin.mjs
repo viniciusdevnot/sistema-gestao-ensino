@@ -4,15 +4,15 @@
 //  - criar usuários na migração do dados.json antigo
 import { createClient } from '@supabase/supabase-js';
 
-const URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://ljcudiuyqyhiourzhiec.supabase.co';
+const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
 const DOMINIO = 'sge.pmto';                // usuários entram como "usuario@sge.pmto" no Supabase Auth
 
 const resp = (status, corpo) => new Response(JSON.stringify(corpo), { status, headers: { 'content-type': 'application/json' } });
 
 export default async (req) => {
   if (req.method !== 'POST') return resp(405, { erro: 'Use POST.' });
-  if (!URL || !SERVICE) return resp(500, { erro: 'Faltam as variáveis VITE_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no Netlify.' });
+  if (!URL || !SERVICE) return resp(500, { erro: 'Falta a variável SUPABASE_SERVICE_ROLE_KEY (a chave secret do Supabase) no Netlify.' });
   const sb = createClient(URL, SERVICE, { auth: { persistSession: false } });
 
   // quem está chamando precisa ser administrador
