@@ -56,6 +56,6 @@ npm run dev
 
 ## Etapas da conversão
 - [x] **Etapa 1** — base: login, perfis (oficial/praça), administrador, registros
-- [ ] **Etapa 2** — Escala de ACO, Painel e almanaques
+- [x] **Etapa 2** — Escala de ACO, Painel (contagem de ACOs) e almanaques — rode `supabase/002_aco.sql` uma vez no Supabase
 - [ ] **Etapa 3** — Ofícios, Ordens de Serviço, Documentos e Procedimentos (com a folha editável)
 - [ ] **Etapa 4** — guia do sistema, planilhas e acabamento

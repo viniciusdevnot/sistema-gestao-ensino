@@ -9,6 +9,7 @@ import Painel from './telas/Painel.jsx';
 import MeuPerfil from './telas/MeuPerfil.jsx';
 import Registros from './telas/Registros.jsx';
 import EmMigracao from './telas/EmMigracao.jsx';
+import Aco from './telas/Aco.jsx';
 import { VIEWS, CAT_DOCM, CAT_PROC } from './lib/catalogo.js';
 
 function Conteudo(){
@@ -33,6 +34,7 @@ function Conteudo(){
   if (view === 'perfil') tela = <MeuPerfil />;
   else if (view === 'registros') tela = <Registros />;
   else if (view === 'painel') tela = <Painel />;
+  else if (view === 'aco') tela = <Aco aoMudarContagem={() => setTags(t => ({ ...t }))} />;
   else if (/^dm-/.test(view)){
     const k = view.slice(3), p = CAT_PROC.find(c => c[0] === k), d = CAT_DOCM.find(c => c[0] === k);
     tit = p ? [`${p[2]} · ${p[1]}`, 'Procedimentos · Manual de Processos e Procedimentos Administrativos (MPPADMIS)'] : [d?.[1] || 'Documentos', VIEWS.docm[1]];

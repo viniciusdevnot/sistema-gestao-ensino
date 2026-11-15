@@ -26,3 +26,25 @@
   .btn{min-height:38px}
 }
 @media (max-width:360px){.kpis{grid-template-columns:1fr}}
+
+/* Escala de ACO (versão React) */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--line2);border-top-color:var(--acc);border-radius:50%;animation:gira .8s linear infinite;vertical-align:-2px;margin-right:4px}
+@keyframes gira{to{transform:rotate(360deg)}}
+.salvo-ind{font-size:12px;white-space:nowrap}
+.tabela-esc tr.entrou td{animation:entrou 1.4s ease}
+@keyframes entrou{0%{background:var(--realce)}100%{background:transparent}}
+@media (max-width:900px){
+  .so-pc{display:none}
+  .aco-topo{flex-wrap:wrap;gap:8px}
+  .aco-topo .dir{width:100%;display:flex;flex-wrap:wrap;gap:6px;margin-left:0}
+  .aco-topo h2{font-size:17px}
+  .aco-pessoas{max-height:55vh}
+  .tabela-esc{overflow-x:auto}
+  .tabela-esc table{min-width:560px}
+  .bloco-cab{flex-wrap:wrap}
+  .rk-ctrl{flex-wrap:wrap}
+  .rk-tab{min-width:620px}
+  .tab-datas{min-width:520px}
+  dialog{padding:16px}
+  dialog .rodape{flex-wrap:wrap}
+}
