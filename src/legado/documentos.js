@@ -2698,6 +2698,7 @@ $('#dm-importar').onclick = () => pedirArquivoPronto('docm');
     setView: v => { viewAtual = v; if (/^dm-/.test(v)){ if (dmCat !== v.slice(3)) dmAtualId = null; dmCat = v.slice(3); } },
     renderOficios, renderOS, renderDocM,
     fechar: () => { ofAtualId = null; osAtualId = null; dmAtualId = null; },
+    recarregarProc: () => { procCache = null; },
     CAT_DOCM, CAT_PROC
   };
 }

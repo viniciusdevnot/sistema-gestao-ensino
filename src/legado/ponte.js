@@ -11,7 +11,7 @@ import { TELAS } from './telas.js';
 
 const TABELAS = { oficios: 'oficios', ordensServico: 'ordens_servico', docsManual: 'documentos' };
 const db = { oficios: [], ordensServico: [], docsManual: [], manualRedacao: null };
-let snap = {}, manualSalvo = null, mppadmis = null, motor = null, caixa = null, guarda = null;
+let snap = {}, manualSalvo = null, mppadmis = null, mppInfo = null, motor = null, caixa = null, guarda = null;
 let timer = null, salvando = null, ctx = { perfil: null, admin: false, registrar: () => {}, avisar: () => {}, ir: () => {}, aoSalvar: () => {} };
 
 const $ = s => document.querySelector(s);
@@ -52,7 +52,8 @@ async function carregar(){
   const c = Object.fromEntries((cfg.data || []).map(x => [x.chave, x.valor]));
   db.manualRedacao = c.manual_redacao || await fetch('/manual-redacao.json').then(r => r.ok ? r.json() : null).catch(() => null);
   manualSalvo = db.manualRedacao;
-  mppadmis = c.mppadmis || await fetch('/modelos-mppadmis.json').then(r => r.ok ? r.json() : []).catch(() => []);
+  if (c.mppadmis?.modelos){ mppadmis = c.mppadmis.modelos; mppInfo = { nome: c.mppadmis.nome, importadoEm: c.mppadmis.importadoEm, por: c.mppadmis.por }; }
+  else { mppadmis = await fetch('/modelos-mppadmis.json').then(r => r.ok ? r.json() : []).catch(() => []); mppInfo = null; }
 }
 
 async function salvarAgora(){
@@ -127,3 +128,27 @@ export function mostrar(no, view){
 export function esconder(){ if (caixa && guarda && caixa.parentNode !== guarda) guarda.appendChild(caixa); motor?.setView(''); }
 /* ao sair da conta: esquece tudo */
 export function zerarDocumentos(){ esconder(); if (caixa) caixa.remove(); if (guarda) guarda.remove(); motor = null; caixa = null; guarda = null; snap = {}; db.oficios = []; db.ordensServico = []; db.docsManual = []; db.manualRedacao = null; }
+
+/* Manual de Procedimentos (MPPADMIS): qual está em uso e importação de um PDF novo (só administrador) */
+export const infoMppadmis = () => ({ qtd: (mppadmis || []).length, ...(mppInfo || { nome: 'Manual de Processos e Procedimentos Administrativos da PMTO (embutido no sistema)' }), embutido: !mppInfo });
+export async function importarMppadmis(file, prog){
+  if (!ctx.admin) throw new Error('Só o administrador pode trocar o manual de procedimentos.');
+  const { lerMppadmis } = await import('./mppadmis.js');
+  const modelos = await lerMppadmis(file, prog);
+  if (modelos.length < 10) throw new Error(`Só encontrei ${modelos.length} modelo(s) neste PDF. Confira se é o Manual de Processos e Procedimentos Administrativos (MPPADMIS).`);
+  const valor = { nome: file.name, importadoEm: new Date().toISOString(), por: quemSou(), modelos };
+  const { error } = await sb.from('configuracoes').upsert({ chave: 'mppadmis', valor, alterado_em: valor.importadoEm, alterado_por: ctx.perfil?.id });
+  if (error) throw new Error(error.message);
+  mppadmis = modelos; mppInfo = { nome: valor.nome, importadoEm: valor.importadoEm, por: valor.por };
+  motor?.recarregarProc();
+  ctx.registrar('arquivo', `importou o manual de procedimentos “${file.name}” (${modelos.length} modelos)`);
+  return modelos.length;
+}
+export async function voltarMppadmisEmbutido(){
+  if (!ctx.admin) return;
+  const { error } = await sb.from('configuracoes').delete().eq('chave', 'mppadmis');
+  if (error) throw new Error(error.message);
+  mppadmis = await fetch('/modelos-mppadmis.json').then(r => r.json()); mppInfo = null; motor?.recarregarProc();
+  ctx.registrar('arquivo', 'voltou ao manual de procedimentos embutido no sistema');
+}
+export const rerender = view => { if (motor && caixa?.parentNode && caixa.parentNode !== guarda) mostrar(caixa.parentNode, view); };
