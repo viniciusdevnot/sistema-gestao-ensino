@@ -15,7 +15,6 @@ export function validaSenha(a, b){
 export function validaUsuario(u){
   if (!u) return 'Informe um usuário.';
   if (!/^[a-z0-9._-]{3,30}$/.test(u)) return 'Usuário: 3 a 30 caracteres, só letras sem acento, números, ponto, hífen ou sublinhado.';
-  if (u === 'admin') return 'Esse usuário é reservado.';
   return '';
 }
 /* oficial ou praça pelo posto (perfis antigos sem a escolha) */
