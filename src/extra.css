@@ -1,0 +1,17 @@
+/* ajustes da versão React */
+.carregando-tela{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--muted);font-size:15px}
+#tela-perfis{position:fixed;inset:0;z-index:50;overflow:auto}
+.tag-adm{font-style:normal;font-size:10px;background:var(--gold);color:var(--navy);border-radius:8px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+.tabela-reg{width:100%;border-collapse:collapse;font-size:13px}
+.tabela-reg th,.tabela-reg td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.tabela-reg tr.novo td{background:var(--realce)}
+.tp-ok{color:var(--ok);font-size:13px;margin:10px 0 0}
+.lista-rec .linha{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.lista-rec .linha .nm{flex:1;min-width:0}
+.lista-rec .linha .nm small{display:block;color:var(--muted)}
+.campos-form label{display:block;margin:12px 0 4px;font-weight:600;font-size:13px}
+.campos-form input:not([type=radio]):not([type=checkbox]),.campos-form select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--campo);color:var(--txt)}
+.campos-form .tp-cat{display:flex;gap:10px}
+.campos-form .tp-cat label{flex:1;display:flex;gap:9px;align-items:flex-start;margin:0;font-weight:400;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
+.campos-form .tp-cat label:has(input:checked){border-color:var(--acc);background:var(--acc2)}
+.campos-form .tp-acoes{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
