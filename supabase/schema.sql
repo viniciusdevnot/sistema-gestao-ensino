@@ -249,3 +249,6 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke all on function public.aco_resumo() from public, anon;
 grant execute on function public.aco_resumo() to authenticated;
+
+-- avisa a API do Supabase que há função nova (evita o erro "schema cache")
+notify pgrst, 'reload schema';
