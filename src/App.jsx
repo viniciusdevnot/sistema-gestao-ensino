@@ -8,7 +8,6 @@ import Acesso from './telas/Acesso.jsx';
 import Painel from './telas/Painel.jsx';
 import MeuPerfil from './telas/MeuPerfil.jsx';
 import Registros from './telas/Registros.jsx';
-import Migracao from './telas/Migracao.jsx';
 import EmMigracao from './telas/EmMigracao.jsx';
 import { VIEWS, CAT_DOCM, CAT_PROC } from './lib/catalogo.js';
 
@@ -17,7 +16,7 @@ function Conteudo(){
   const [view, setView] = useState(() => (location.hash || '#painel').slice(1));
   const [tags, setTags] = useState({});
   const ir = v => { setView(v); history.replaceState(null, '', '#' + v); };
-  useEffect(() => { if (/^dm-pr-/.test(view) && perfil && !ehOficial) ir('painel'); if ((view === 'registros' || view === 'migracao') && perfil && !ehAdmin) ir('painel'); }, [view, perfil, ehAdmin, ehOficial]);
+  useEffect(() => { if (/^dm-pr-/.test(view) && perfil && !ehOficial) ir('painel'); if ((view === 'registros') && perfil && !ehAdmin) ir('painel'); }, [view, perfil, ehAdmin, ehOficial]);
   // registra o acesso e o último acesso
   useEffect(() => { if (!perfil) return; api.salvarPerfil(perfil.id, { ultimo_acesso: new Date().toISOString() }).catch(() => {}); registrar('acesso', 'entrou no sistema'); }, [perfil?.id]);
   useEffect(() => { if (!perfil) return; const id = ehAdmin ? undefined : perfil.id;
@@ -31,7 +30,6 @@ function Conteudo(){
   let tela, tit = VIEWS[view] || VIEWS.painel;
   if (view === 'perfil') tela = <MeuPerfil />;
   else if (view === 'registros') tela = <Registros />;
-  else if (view === 'migracao') tela = <Migracao />;
   else if (view === 'painel') tela = <Painel />;
   else if (/^dm-/.test(view)){
     const k = view.slice(3), p = CAT_PROC.find(c => c[0] === k), d = CAT_DOCM.find(c => c[0] === k);

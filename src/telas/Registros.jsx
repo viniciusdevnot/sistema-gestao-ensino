@@ -15,7 +15,7 @@ export default function Registros(){
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
           <input placeholder="Buscar por nome ou ação" value={busca} onChange={e => setBusca(e.target.value)} style={{ flex: 1, minWidth: 220, padding: '8px 10px', border: '1px solid var(--line)', borderRadius: 8 }} />
           <select value={tipo} onChange={e => setTipo(e.target.value)} style={{ padding: '8px 10px', border: '1px solid var(--line)', borderRadius: 8 }}>
-            <option value="">Todos os tipos</option>{['acesso', 'perfil', 'aco', 'arquivo', 'docm', 'oficio', 'os', 'migracao'].map(t => <option key={t}>{t}</option>)}
+            <option value="">Todos os tipos</option>{['acesso', 'perfil', 'aco', 'arquivo', 'docm', 'oficio', 'os'].map(t => <option key={t}>{t}</option>)}
           </select>
         </div>
         {!lista ? <div className="vazio">Carregando…</div> : !lista.length ? <div className="vazio">Nenhum registro.</div> : (

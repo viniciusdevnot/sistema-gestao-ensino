@@ -24,5 +24,4 @@ export const VIEWS = {
   planilhas: ['Planilhas', 'Tabelas do setor'],
   perfil: ['Meu perfil', 'Seus dados e sua senha'],
   registros: ['Registros', 'Tudo o que foi feito no sistema, por quem e quando'],
-  migracao: ['Dados e migração', 'Trazer os dados do sistema anterior (dados.json) para o banco']
 };

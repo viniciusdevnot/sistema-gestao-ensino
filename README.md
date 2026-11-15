@@ -28,10 +28,7 @@ O código fica num repositório **privado** no GitHub. Toda alteração enviada 
 
 ### 4. Primeiro acesso
 1. Abra o site e clique em **Criar usuário**. **O primeiro usuário criado vira administrador.**
-2. Em **Dados e migração**, escolha o `dados.json` do sistema anterior: usuários, escalas, ofícios, ordens de serviço,
-   documentos, planilhas, registros, manual de redação, almanaques e o histórico do painel vêm para o banco.
-   Os usuários trazidos entram com a senha provisória definida ali e criam a própria senha no primeiro acesso.
-3. (Opcional) Na mesma tela, envie a pasta antiga para levar os PDFs ao armazenamento on-line.
+2. Os demais usuários criam o próprio acesso na tela inicial; o administrador gerencia todos em **Meu perfil**.
 
 ## Desenvolvimento no computador
 ```bash
@@ -43,11 +40,11 @@ npm run dev
 ## Estrutura
 | Pasta | O que tem |
 |---|---|
-| `src/telas/` | telas (acesso, painel, perfil, registros, migração…) |
+| `src/telas/` | telas (acesso, painel, perfil, registros…) |
 | `src/componentes/` | menu lateral, ícones |
 | `src/lib/api.js` | tudo que lê/grava no Supabase |
 | `supabase/schema.sql` | tabelas, permissões (RLS) e armazenamento |
-| `netlify/functions/admin.mjs` | ações do administrador que usam a chave secreta (redefinir senha, excluir e migrar usuários) |
+| `netlify/functions/admin.mjs` | ações do administrador que usam a chave secreta (redefinir senha e excluir usuários) |
 | `legado/` | código do sistema anterior (referência para as próximas etapas da conversão) |
 
 ## Segurança
@@ -58,7 +55,7 @@ npm run dev
   em nuvem (LGPD) e mantenha o repositório **privado**.
 
 ## Etapas da conversão
-- [x] **Etapa 1** — base: login, perfis (oficial/praça), administrador, registros, migração do `dados.json`
+- [x] **Etapa 1** — base: login, perfis (oficial/praça), administrador, registros
 - [ ] **Etapa 2** — Escala de ACO, Painel e almanaques
 - [ ] **Etapa 3** — Ofícios, Ordens de Serviço, Documentos e Procedimentos (com a folha editável)
 - [ ] **Etapa 4** — guia do sistema, planilhas e acabamento

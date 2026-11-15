@@ -57,7 +57,6 @@ export default function Layout({ view, ir, titulo, sub, tags = {}, children }){
         </>}
         {item('planilhas', 'Planilhas', 'tabela', tags.planilhas ?? 0)}
         <div className="grupo">Sistema</div>
-        {ehAdmin && item('migracao', 'Dados e migração', 'backup')}
         {ehAdmin && item('registros', 'Registros', 'lista')}
         {item('perfil', 'Meu perfil', 'user')}
       </nav>
