@@ -2125,8 +2125,8 @@ async function tabelasDaPagina(pdfjs, pg, vp){
   const caixa = (x0, y0, x1, y1) => { const a = pt(x0, y0), b = pt(x1, y1), c = pt(x0, y1), d = pt(x1, y0); const xs = [a[0], b[0], c[0], d[0]], ys = [a[1], b[1], c[1], d[1]]; return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
   const addCaixa = ([x0, y0, x1, y1]) => {
     const w = x1 - x0, h = y1 - y0;
-    if (h <= 2.5 && w > 3) H.push({y: (y0 + y1) / 2, x0, x1});
-    else if (w <= 2.5 && h > 3) V.push({x: (x0 + x1) / 2, y0, y1});
+    if (h <= 2.5 && w > 3 && w >= h) H.push({y: (y0 + y1) / 2, x0, x1});
+    else if (w <= 2.5 && h > 1.2 && h > w * 1.6) V.push({x: (x0 + x1) / 2, y0, y1});
   };
   ol.fnArray.forEach((f, i) => {
     const a = ol.argsArray[i];
@@ -2159,7 +2159,7 @@ async function tabelasDaPagina(pdfjs, pg, vp){
   tabelasDaPagina.soltas = H;
   if (H.length < 2 || V.length < 2) return [];
   // junta segmentos colineares e agrupa em tabelas (linhas que se tocam)
-  const tol = 2;
+  const tol = 2.6;
   const grupos = []; const pai = new Map();
   const todas = [...H.map(h => ({...h, t: 'h'})), ...V.map(v => ({...v, t: 'v'}))];
   todas.forEach(s => pai.set(s, s));

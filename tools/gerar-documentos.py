@@ -16,6 +16,13 @@ corpo = '\n'.join(src[ini:fim + 1])
 corpo = re.sub(r'(?<![\w.$])perfilId\b', 'P.perfilId', corpo)
 corpo = corpo.replace("try { lista = JSON.parse(document.getElementById('proc-modelos').textContent); } catch {}", "lista = P.mppadmis() || [];")
 corpo = corpo.replace("async function importarManualRedacao(file){\n  if (!file) return;", "async function importarManualRedacao(file){\n  if (!file) return;\n  if (!ehAdmin()){ alert('Só o administrador pode trocar o manual de redação.'); return; }")
+# tabelas com bordas em pedaços: os pedacinhos que ligam a borda vertical à horizontal (0,5 × 2,4 pt)
+# também contam como borda; senão as linhas de dados da tabela não se ligam ao cabeçalho
+velho = "    if (h <= 2.5 && w > 3) H.push({y: (y0 + y1) / 2, x0, x1});\n    else if (w <= 2.5 && h > 3) V.push({x: (x0 + x1) / 2, y0, y1});"
+assert velho in corpo
+corpo = corpo.replace(velho, "    if (h <= 2.5 && w > 3 && w >= h) H.push({y: (y0 + y1) / 2, x0, x1});\n    else if (w <= 2.5 && h > 1.2 && h > w * 1.6) V.push({x: (x0 + x1) / 2, y0, y1});")
+assert "  const tol = 2;\n  const grupos" in corpo
+corpo = corpo.replace("  const tol = 2;\n  const grupos", "  const tol = 2.6;\n  const grupos")
 # os ouvintes de "resize" e "input" ficam registrados uma vez só (montar roda uma vez)
 assert corpo.count("window.addEventListener('resize'") == 3
 
