@@ -12,7 +12,7 @@ import { TELAS } from './telas.js';
 const TABELAS = { oficios: 'oficios', ordensServico: 'ordens_servico', docsManual: 'documentos' };
 const db = { oficios: [], ordensServico: [], docsManual: [], manualRedacao: null };
 let snap = {}, manualSalvo = null, mppadmis = null, mppInfo = null, motor = null, caixa = null, guarda = null;
-let timer = null, salvando = null, ctx = { perfil: null, admin: false, registrar: () => {}, avisar: () => {}, ir: () => {}, aoSalvar: () => {} };
+let bannerBytes = null, timer = null, salvando = null, ctx = { perfil: null, admin: false, registrar: () => {}, avisar: () => {}, ir: () => {}, aoSalvar: () => {} };
 
 const $ = s => document.querySelector(s);
 function el(tag, props = {}, ...filhos){
@@ -107,6 +107,8 @@ export async function prepararDocumentos(opts){
       perfilAtual: () => ctx.perfil || {},
       irPara: v => ctx.ir(v),
       mppadmis: () => mppadmis,
+      // cabeçalho padrão (Ofício Circular nº 022/2025/GCG): brasão da PMTO + TOCANTINS/Governo do Estado + brasão do Estado
+      banner: () => bannerBytes ||= fetch('/cabecalho-pmto.jpg').then(r => { if (!r.ok) throw new Error('Imagem do cabeçalho não encontrada'); return r.arrayBuffer(); }).then(b => new Uint8Array(b)),
       get perfilId(){ return ctx.perfil?.id; },
       get admin(){ return ctx.admin; },
       view: ''

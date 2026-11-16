@@ -1,6 +1,9 @@
 /* Leitura de PDFs (pdf.js) e geração do PDF da escala (pdf-lib).
    As bibliotecas só são baixadas quando usadas, para o site abrir rápido. */
-import { dataBR, diaSemana, dataExtenso, hojeISO, MESES_NOME, palavras, horarioPessoa } from './logica.js';
+import { dataBR, diaSemana, dataExtenso, hojeISO, MESES_NOME, palavras, horarioPessoa, norm } from './logica.js';
+
+/* linhas do cabeçalho antigo que o cabeçalho padrão já traz (brasões, TOCANTINS, nome da Corporação) */
+export const ehCabPadrao = t => /^(ESTADO DO TOCANTINS|GOVERNO DO (ESTADO|TOCANTINS)( DO TOCANTINS)?|TOCANTINS|POLICIA MILITAR( DO ESTADO)?( DO TOCANTINS)?|PMTO|PM ?TO)$/.test(norm(String(t || '').replace(/\*\*/g, '')).replace(/[.\s]+$/, ''));
 
 let _pdfjs = null;
 export async function carregarPdfjs(){
@@ -55,7 +58,7 @@ export async function gerarBytesACO(e, blocos){
   const mes = MESES_NOME[+e.data.slice(5, 7) - 1];
   doc.setTitle(`ACO Nº ${D.numero}-${e.data.slice(0, 4)} – ${mes}${D.operacao ? ' – ' + D.operacao : ''}`); doc.setAuthor(D.cab2);
   const F = await doc.embedFont(StandardFonts.Helvetica), FB = await doc.embedFont(StandardFonts.HelveticaBold), FI = await doc.embedFont(StandardFonts.HelveticaOblique);
-  const banner = await doc.embedJpg(await (await fetch('/cabecalho-aco.jpg')).arrayBuffer());
+  const banner = await doc.embedJpg(await (await fetch('/cabecalho-pmto.jpg')).arrayBuffer());
   const W = 595.32, H = 841.92, PRETO = rgb(0, 0, 0), BRANCO = rgb(1, 1, 1);
   const ML = 56.8, MR = 510.3, TOPO2 = 57;
   const ok = (t, f) => [...String(t ?? '')].map(ch => { try { f.widthOfTextAtSize(ch, 10); return ch; } catch { return '?'; } }).join('');
@@ -116,12 +119,15 @@ export async function gerarBytesACO(e, blocos){
   pg = doc.addPage([W, H]);
   const bw = 325.05, bh = bw * banner.height / banner.width;
   pg.drawImage(banner, { x: 134.9, y: H - 10.3 - bh, width: bw, height: bh });
-  centro(D.cab1, 105.4, F, 12); centro(D.cab2, 119.2, F, 12);
-  centro(D.titulo, 145.6, FB, 12, { sub: true });
-  y = 173.2;
+  // cabeçalho padrão (Ofício Circular nº 022/2025/GCG): nome da Corporação por extenso, depois a unidade
+  const cabs = ['POLÍCIA MILITAR DO ESTADO DO TOCANTINS', ...[D.cab1, D.cab2].filter(t => (t || '').trim() && !ehCabPadrao(t))];
+  cabs.forEach((t, i) => centro(t.toUpperCase(), 105.4 + i * 13.8, F, 12));
+  const dy = (cabs.length - 2) * 13.8;
+  centro(D.titulo, 145.6 + dy, FB, 12, { sub: true });
+  y = 173.2 + dy;
   if (D.operacao){ centro(D.operacao, y, FB, 12, { sub: true }); y += 13.7; }
   if (D.sgd){ centro('SGD: ' + D.sgd, y, FI, 9); y += 10; }
-  y = Math.max(y + 14.4, 225.1);
+  y = Math.max(y + 14.4, 225.1 + dy);
   if (D.uniforme){ paragrafo('**Uniforme:** ' + D.uniforme, ML, MR - ML, 12, 17.2, true); y += 6.1; }
   if (D.armamento){ paragrafo('**Armamento e Equipamento:** ' + D.armamento, ML, MR - ML, 12, 17.2, true); y += 6.1; }
   const obs = String(D.obs || '').split(/\n/).map(x => x.trim()).filter(Boolean);
