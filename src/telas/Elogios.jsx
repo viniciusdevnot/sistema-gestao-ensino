@@ -5,6 +5,7 @@ import * as BD from '../elogios/dados.js';
 import * as DOC from '../elogios/documentos.js';
 import { carregarPdfjs, baixar } from '../aco/pdf.js';
 import { salvarPendente } from '../legado/ponte.js';
+import { lerBoletim } from '../elogios/boletim.js';
 
 /* Elogios e referências elogiosas — Portaria Normativa nº 020/2025-PM1
    Fluxo: o comandante imediato (CPU ou Cmt de Cia) solicita por ofício → o Cmt do BTL (ou o Subcmt, respondendo
@@ -49,7 +50,7 @@ function Lista({ lista, cmts, abrir, criar }){
   const { perfil, ehAdmin, registrar, avisar } = useSessao();
   const [f, setF] = useState({ tipo: '', sit: '', per: 'ano', busca: '' });
   const [importando, setImportando] = useState(false);
-  const inp = useRef();
+  const inp = useRef(), inpBo = useRef();
   const autoriza = ehAdmin || R.ehAutorizador(perfil?.funcao);
   const hoje = R.hojeISO();
   const filtrada = useMemo(() => lista.filter(e => {
@@ -69,7 +70,7 @@ function Lista({ lista, cmts, abrir, criar }){
     const e = { ...R.novoPedido(perfil, base), ...extra, id: uid(), situacao: 'rascunho' };
     const cmt = cmts.find(c => c.funcao === 'cmt_btl');
     if (cmt && !extra.destino) e.destino = { ...e.destino, posto: cmt.posto || '', nome: cmt.nome || '', funcao: `Comandante do ${e.publicacao.unidade || cmt.setor || 'BTL'}` };
-    e.historico = [{ em: new Date().toISOString(), por: quem(perfil), acao: extra.oficio ? 'importou o ofício já feito' : 'começou o pedido' }];
+    e.historico = [{ em: new Date().toISOString(), por: quem(perfil), acao: extra.oficio ? 'importou o ofício já feito' : extra.boletim ? `começou o pedido pelo ${extra.boletim.tipoRegistro || 'BO'} ${extra.boletim.protocolo}` : 'começou o pedido' }];
     try { const g = await BD.gravarElogio(e, perfil); registrar('elogio', `começou um pedido de ${R.rotuloTipo(e).toLowerCase()}`); criar(g); }
     catch (er){ alert(er.message); }
   };
@@ -95,12 +96,27 @@ function Lista({ lista, cmts, abrir, criar }){
     } catch (er){ console.error(er); alert('Não consegui ler este ofício: ' + er.message); }
     finally { setImportando(false); }
   };
+  const importarBo = async file => {
+    if (!file) return; setImportando(true);
+    try {
+      const d = await lerBoletim(file);
+      const p = R.novoPedido(perfil, DOC.baseUnidade(perfil));
+      p.policiais = [];
+      R.aplicarBoletim(p, d, file.name);
+      if (!p.policiais.length) p.policiais = [R.novoPolicial()];
+      await novo({ fato: p.fato, boletim: p.boletim, policiais: p.policiais });
+      avisar(`Boletim lido: ${d.guarnicao.length} policial(is) na guarnição. Marque no passo 3 quem recebe o elogio.`);
+    } catch (er){ console.error(er); alert('Não consegui ler este boletim: ' + er.message); }
+    finally { setImportando(false); }
+  };
   return (
     <section className="view ativa el">
       <div className="el-acoes">
         <button className="btn pri" onClick={() => novo()}>＋ Novo pedido de elogio / referência</button>
         <button className="btn" disabled={importando} onClick={() => inp.current.click()}>{importando ? <><span className="spinner" /> Lendo…</> : 'Importar ofício já feito (Word ou PDF)'}</button>
+        <button className="btn" disabled={importando} onClick={() => inpBo.current.click()}>Importar boletim de ocorrência (PDF)</button>
         <input ref={inp} type="file" hidden accept=".pdf,.docx" onChange={e => { importar(e.target.files[0]); e.target.value = ''; }} />
+        <input ref={inpBo} type="file" hidden accept=".pdf" onChange={e => { importarBo(e.target.files[0]); e.target.value = ''; }} />
         <span className="esp" />
         <span className="tg ef" title="A Portaria nº 017/2014-GCG foi revogada (art. 21)">{R.NORMA}</span>
       </div>
@@ -256,7 +272,8 @@ function PassoFato({ e, muda }){
   const f = e.fato, set = (k, v) => muda(x => { x.fato[k] = v; });
   const d = R.diasEntre(f.data, R.hojeISO());
   return (<>
-    <h3>2. O fato</h3>
+    <div className="el-h3"><h3>2. O fato</h3><PuxarBoletim e={e} muda={muda} /></div>
+    {e.boletim && <p className="dica" style={{ margin: '-6px 0 12px' }}>Dados do fato conferidos com o {e.boletim.tipoRegistro} {e.boletim.protocolo} ({e.boletim.arquivo}). A narrativa e a conduta vêm do ofício ou de quem solicita, não do BO.</p>}
     <div className="el-campos">
       <label>Data do fato<input type="date" value={f.data} max={R.hojeISO()} onChange={x => set('data', x.target.value)} /></label>
       <label>Hora<input type="time" value={f.hora} onChange={x => set('hora', x.target.value)} /></label>
@@ -277,7 +294,8 @@ function PassoPoliciais({ e, muda }){
   const set = (i, k, v) => muda(x => { x.policiais[i][k] = v; });
   const col = e.alcance === 'coletivo';
   return (<>
-    <h3>3. Policiais (qualificação completa – art. 6º, II)</h3>
+    <div className="el-h3"><h3>3. Policiais (qualificação completa – art. 6º, II)</h3><PuxarBoletim e={e} muda={muda} /></div>
+    <GuarnicaoBo e={e} muda={muda} />
     <datalist id="el-postos">{POSTOS.map(p => <option key={p} value={p} />)}</datalist>
     <div className="el-pols">
       {e.policiais.map((p, i) => (
@@ -558,4 +576,43 @@ function BaixarPdf({ tipo, doc }){
 function BaixarTodos({ docs }){
   const [oc, setOc] = useState(false);
   return <button className="btn" disabled={oc} onClick={async () => { setOc(true); try { for (const [k, , d] of docs){ const t = k === 'oficio' ? 'oficio' : 'docm'; baixar(DOC.nomeDoc(t, d), await DOC.pdfDe(t, clone(d))); await new Promise(r => setTimeout(r, 400)); } } catch (er){ alert(er.message); } finally { setOc(false); } }}>{oc ? 'Gerando…' : `Baixar os ${docs.length} PDFs`}</button>;
+}
+
+/* ---------- Boletim de Ocorrência: puxar data, hora, local, natureza, protocolo e guarnição ---------- */
+function PuxarBoletim({ e, muda }){
+  const { avisar, perfil } = useSessao();
+  const inp = useRef();
+  const [oc, setOc] = useState(false);
+  const ler = async file => {
+    if (!file) return; setOc(true);
+    try {
+      const d = await lerBoletim(file);
+      const f = e.fato || {}, outro = [];
+      if (d.protocolo && (f.bo || '').replace(/\D/g, '') && d.protocolo !== f.bo.replace(/\D/g, '')) outro.push(`protocolo ${d.protocolo} (no pedido: ${f.bo})`);
+      if (d.fato.data && f.data && d.fato.data !== f.data) outro.push(`data ${R.dataBR(d.fato.data)} (no pedido: ${R.dataBR(f.data)})`);
+      if (outro.length && !confirm(`Este boletim parece ser de outro fato:\n\n• ${outro.join('\n• ')}\n\nVincular assim mesmo? (os campos já preenchidos não serão trocados)`)) return;
+      let feitos = [];
+      muda(x => { feitos = R.aplicarBoletim(x, d, file.name); x.historico = [...(x.historico || []), { em: new Date().toISOString(), por: quem(perfil), acao: `vinculou o ${d.tipoRegistro} ${d.protocolo}` }]; });
+      setTimeout(() => avisar(feitos.length ? `Do boletim: ${feitos.join(', ')}. Confira.` : 'Boletim vinculado. Os campos já estavam preenchidos; veja as diferenças na conferência.'), 50);
+    } catch (er){ console.error(er); alert('Não consegui ler este boletim: ' + er.message); }
+    finally { setOc(false); }
+  };
+  return <><button className="btn peq" disabled={oc} onClick={() => inp.current.click()}>{oc ? 'Lendo…' : e.boletim ? 'Trocar o boletim (PDF)' : 'Puxar dados do boletim de ocorrência (PDF)'}</button>
+    <input ref={inp} type="file" hidden accept=".pdf" onChange={x => { ler(x.target.files[0]); x.target.value = ''; }} /></>;
+}
+function GuarnicaoBo({ e, muda }){
+  const g = e.boletim?.guarnicao || [];
+  if (!g.length) return null;
+  const incluir = p => muda(x => {
+    const vazio = x.policiais.findIndex(y => !(y.nome || '').trim() && !(y.matricula || '').trim());
+    const novo = { ...R.novoPolicial(), posto: p.posto, matricula: p.matricula, nome: p.nome, guerra: p.guerra || [] };
+    if (vazio >= 0) x.policiais[vazio] = novo; else x.policiais.push(novo);
+  });
+  return <div className="el-gu">
+    <div className="el-sub" style={{ marginTop: 0 }}>Guarnição do {e.boletim.tipoRegistro?.replace(/ Protocolo nº| nº/, '')} {e.boletim.protocolo} — marque quem recebe o reconhecimento</div>
+    {g.map((p, k) => { const ja = R.naGuarnicao(e, p); return <div key={k} className={'el-gu-l' + (ja ? ' ja' : '')}>
+      <span><b>{[p.posto, p.matricula].filter(Boolean).join(' ')}</b> {p.nome}<small>{p.funcaoGu}</small></span>
+      {ja ? <span className="tg lib">✓ no pedido</span> : <button className="btn peq" onClick={() => incluir(p)}>＋ Incluir</button>}
+    </div>; })}
+  </div>;
 }

@@ -136,3 +136,8 @@
 .el-campos input,.el-campos select,.el-campos textarea{width:100%;min-width:0;box-sizing:border-box}
 .el-campos label{min-width:0}
 .el-tab .el-tipo{white-space:normal;display:inline-block;line-height:1.3}
+.el-h3{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}.el-h3 h3{margin:0}
+.el-gu{border:1px dashed var(--line2,var(--line));border-radius:12px;padding:12px;margin-bottom:14px;background:var(--panel)}
+.el-gu-l{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}.el-gu-l:last-child{border:0}
+.el-gu-l small{display:block;color:var(--muted);font-size:11.5px}.el-gu-l.ja{opacity:.75}
+.el-gu-l .btn{white-space:nowrap;flex:none}

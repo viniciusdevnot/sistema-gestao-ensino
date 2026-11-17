@@ -26,7 +26,7 @@ export const MODALIDADES = {
   III: ['Ação de Repercussão Positiva', 'ato ou comportamento digno de destaque, com benefício direto à instituição e reflexos favoráveis à imagem, ao prestígio ou à credibilidade da Corporação']
 };
 
-export const REGISTROS_BO = ['Boletim de Atendimento Protocolo nº', 'Boletim de Ocorrência nº', 'Registro de Atendimento nº', 'Protocolo SGD nº'];
+export const REGISTROS_BO = ['Boletim de Atendimento Protocolo nº', 'Boletim de Ocorrência Protocolo nº', 'Boletim de Ocorrência nº', 'Registro de Atendimento nº', 'Protocolo SGD nº'];
 
 /* ---------- utilidades ---------- */
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -182,11 +182,12 @@ export function conferir(e, { id, fatos = [], dataRef } = {}){
   const cond = limpo(f.conduta).length;
   add(cond >= 40 ? 'ok' : 'er', 'Conduta e justificativa (art. 6º, IV e art. 15, II)', cond >= 40 ? 'descrição clara da conduta' : 'descreva a conduta e por que merece o reconhecimento', 2);
   add(e.declaracoes?.naoRotina ? 'ok' : 'er', 'Não é mera obrigação legal ou rotina (art. 15, I)', e.declaracoes?.naoRotina ? 'declarado por quem indica' : 'marque a declaração no passo “O fato”', 2);
+  if (e.boletim){ const dv = divergenciasBoletim(e); add(dv.length ? 'av' : 'ok', 'Confere com o boletim de ocorrência', dv.length ? dv.join('; ') : `${e.boletim.tipoRegistro || 'BO'} ${e.boletim.protocolo}: data, hora e guarnição batem`, 2); }
   // passo 3 — policiais
   const incomp = ps.filter(p => !limpo(p.posto) || !soDigitos(p.matricula) || !limpo(p.nome));
   add(ps.length && !incomp.length ? 'ok' : 'er', 'Qualificação completa (art. 6º, II)', !ps.length ? 'inclua pelo menos um policial' : incomp.length ? `falta posto, matrícula ou nome de ${incomp.length} policial(is)` : `${ps.length} policial(is): posto, matrícula e nome`, 3);
   const comProc = ps.filter(p => !p.semProcesso);
-  add(ps.length && !comProc.length ? 'ok' : 'er', 'Sem processo disciplinar pelo fato (art. 15, V)', comProc.length ? `confirme para ${comProc.map(p => limpo(p.nome).split(' ')[0] || 'o policial').join(', ')}` : 'confirmado para todos', 3);
+  add(ps.length && !comProc.length ? 'ok' : 'er', 'Sem processo disciplinar pelo fato (art. 15, V)', !ps.length ? 'inclua os policiais' : comProc.length ? `confirme para ${comProc.map(p => limpo(p.nome).split(' ')[0] || 'o policial').join(', ')}` : 'confirmado para todos', 3);
   if (e.alcance === 'coletivo'){
     const semPart = ps.filter(p => limpo(p.participacao).length < 10);
     add(ps.length < 2 ? 'av' : semPart.length ? 'er' : 'ok', 'Participação individual no coletivo (art. 7º, p.ú. e art. 15, IV)', ps.length < 2 ? 'coletivo com um só policial: use “Individual”' : semPart.length ? `descreva a participação de ${semPart.length} policial(is)` : 'participação de cada um descrita');
@@ -232,5 +233,39 @@ export function lerOficioPronto(txt){
   const mOf = /Of[íi]cio n[º°]\s*(\d+)\/(\d{4})\/([^\n]+)/i.exec(t);
   if (mOf) out.oficioNumero = { numero: mOf[1], ano: mOf[2], setores: mOf[3].split(/\s*[-–/]\s*/).map(limpo).filter(Boolean).slice(0, 2) };
   const mSgd = /SGD:\s*([\d/]+)/i.exec(t); if (mSgd) out.sgd = mSgd[1];
+  return out;
+}
+
+/* ---------- Boletim de Ocorrência: completa só os dados objetivos do fato (narrativa e conduta ficam com o ofício) ---------- */
+const mesmoPolicial = (p, g) => (soDigitos(p.matricula) && soDigitos(p.matricula) === g.matricula)
+  || (limpo(p.nome) && limpo(p.nome).toUpperCase() === g.nome)
+  || (limpo(p.nome).length > 3 && g.nome.split(' ').filter(w => w.length > 2).every(w => limpo(p.nome).toUpperCase().includes(w)));
+export function aplicarBoletim(e, d, arquivo){
+  const f = e.fato, feitos = [];
+  const pega = (k, v, rot) => { if (v && !limpo(f[k])){ f[k] = v; feitos.push(rot); } };
+  pega('data', d.fato.data, 'data'); pega('hora', d.fato.hora, 'hora'); pega('local', d.fato.local, 'local'); pega('natureza', d.fato.natureza, 'natureza');
+  if (d.protocolo && !limpo(f.bo)){ f.bo = d.protocolo; f.boTipo = d.tipoRegistro || f.boTipo; feitos.push('nº do protocolo'); }
+  // completa os policiais que já estão no pedido (posto, matrícula, nome completo)
+  let compl = 0;
+  (e.policiais || []).forEach(p => { const g = (d.guarnicao || []).find(g => mesmoPolicial(p, g)); if (!g) return;
+    if (!limpo(p.posto) && g.posto){ p.posto = g.posto; compl++; }
+    if (!soDigitos(p.matricula) && g.matricula){ p.matricula = g.matricula; compl++; }
+    if (limpo(p.nome).length < g.nome.length && g.nome.includes(limpo(p.nome).toUpperCase())){ p.nome = g.nome; compl++; } });
+  if (compl) feitos.push('dados dos policiais');
+  const ref = `${d.tipoRegistro || 'Boletim de Ocorrência Protocolo nº'} ${d.protocolo || ''}`.trim();
+  if (d.protocolo && !String(f.comprovantes || '').includes(d.protocolo)){ f.comprovantes = [limpo(f.comprovantes), `cópia do ${ref}`].filter(Boolean).join('; '); feitos.push('comprovante'); }
+  e.boletim = { arquivo, lidoEm: new Date().toISOString(), protocolo: d.protocolo || '', tipoRegistro: d.tipoRegistro, data: d.fato.data || '', hora: d.fato.hora || '', local: d.fato.local || '', natureza: d.fato.natureza || '', guarnicao: d.guarnicao || [] };
+  return feitos;
+}
+export const naGuarnicao = (e, g) => (e.policiais || []).some(p => mesmoPolicial(p, g));
+/* diferenças entre o pedido e o BO (para o comandante decidir) */
+export function divergenciasBoletim(e){
+  const b = e.boletim, f = e.fato || {}; if (!b) return [];
+  const out = [];
+  if (b.data && f.data && b.data !== f.data) out.push(`data: BO ${dataBR(b.data)} × pedido ${dataBR(f.data)}`);
+  if (b.hora && f.hora && b.hora !== f.hora) out.push(`hora: BO ${horaBR(b.hora)} × pedido ${horaBR(f.hora)}`);
+  if (b.protocolo && soDigitos(f.bo) && b.protocolo !== soDigitos(f.bo)) out.push(`protocolo: BO ${b.protocolo} × pedido ${limpo(f.bo)}`);
+  const fora = policiaisValidos(e).filter(p => !(b.guarnicao || []).some(g => mesmoPolicial(p, g)));
+  if (b.guarnicao?.length && fora.length) out.push(`${fora.map(p => limpo(p.nome).split(' ')[0]).join(', ')} não consta(m) na guarnição do BO`);
   return out;
 }
