@@ -22,6 +22,7 @@ export const VIEWS = {
   os: ['Ordens de Serviço', 'Ordem de Serviço em tabela, no padrão do Manual de Redação Oficial da PMTO'],
   docm: ['Documentos', 'Modelos do Manual de Redação Oficial da PMTO'],
   planilhas: ['Planilhas', 'Tabelas do setor'],
+  elogios: ['Elogios', 'Elogios e referências elogiosas · Portaria Normativa nº 020/2025-PM1'],
   perfil: ['Meu perfil', 'Seus dados e sua senha'],
   registros: ['Registros', 'Tudo o que foi feito no sistema, por quem e quando'],
 };

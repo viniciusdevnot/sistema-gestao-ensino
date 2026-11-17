@@ -12,6 +12,8 @@ import EmMigracao from './telas/EmMigracao.jsx';
 import Aco from './telas/Aco.jsx';
 import Documentos from './telas/Documentos.jsx';
 import Planilhas from './telas/Planilhas.jsx';
+import Elogios from './telas/Elogios.jsx';
+import { contarPendentes } from './elogios/dados.js';
 import Guia from './componentes/Guia.jsx';
 import { GUIA_VERSAO } from './lib/guia.js';
 import { zerarDocumentos } from './legado/ponte.js';
@@ -29,7 +31,8 @@ function Conteudo(){
   // registra o acesso e o último acesso
   useEffect(() => { if (!perfil) return; api.salvarPerfil(perfil.id, { ultimo_acesso: new Date().toISOString() }).catch(() => {}); registrar('acesso', 'entrou no sistema'); }, [perfil?.id]);
   useEffect(() => { if (!perfil) return; const id = ehAdmin ? undefined : perfil.id;
-    Promise.all(['escalas_aco', 'oficios', 'ordens_servico', 'planilhas'].map(t => api.contar(t, id).catch(() => 0))).then(([aco, oficio, os, planilhas]) => setTags({ aco, oficio, os, planilhas })); }, [perfil?.id, view]);
+    Promise.all(['escalas_aco', 'oficios', 'ordens_servico', 'planilhas'].map(t => api.contar(t, id).catch(() => 0))).then(([aco, oficio, os, planilhas]) => setTags(t => ({ ...t, aco, oficio, os, planilhas })));
+    if (ehAdmin || perfil.funcao) contarPendentes(perfil, ehAdmin).then(elogios => setTags(t => ({ ...t, elogios }))); }, [perfil?.id, view]);
 
   useEffect(() => { if (sessao === null){ zerarDocumentos(); setGuia(null); } }, [sessao]);
   // guia: abre sozinho no 1º acesso de cada perfil
@@ -63,6 +66,7 @@ function Conteudo(){
   }
   else if (view === 'oficio' || view === 'os') tela = <Documentos view={view} ir={ir} />;
   else if (view === 'planilhas') tela = <Planilhas />;
+  else if (view === 'elogios') tela = (ehAdmin || perfil.funcao) ? <Elogios ir={ir} /> : <div className="card"><h3>Elogios</h3><p className="dica">Esta parte é para quem tem função de comando (Comandante ou Subcomandante do BTL, Comandante de Companhia ou CPU). Peça ao administrador para definir a sua função em Meu perfil → Perfis cadastrados.</p></div>;
   else tela = <EmMigracao chave={view} nome={tit[0]} />;
   return (<>
     <Layout view={view} ir={ir} titulo={tit[0]} sub={tit[1]} tags={tags} abrirGuia={() => setGuia({ cap: 0 })}>{tela}</Layout>

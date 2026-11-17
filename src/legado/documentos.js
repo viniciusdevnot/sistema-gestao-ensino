@@ -5,7 +5,10 @@ import { LOGO } from './logo.js';
 export function montar(P){
   const { db, $, el, uid, norm, dataBR, hojeISO, MESES_NOME, VIEWS, carregarPdfjs, carregarPdfLib, baixar, registrar, status, agendarSalvar, perfilAtual, quemSou, irPara } = P;
   const ehAdmin = () => P.admin, dirHandle = null;
-  let viewAtual = P.view;
+  let viewAtual = P.view, retorno = null;
+  // documento aberto a partir de outra tela (Elogios): o botão "voltar" leva de volta para lá
+  function voltarRetorno(){ if (!retorno) return false; const r = retorno; retorno = null; rotuloVoltar(); irPara(r); return true; }
+  function rotuloVoltar(){ const a = $('#of-voltar'), b = $('#dm-voltar'); if (a) a.textContent = retorno ? '← Elogios' : '← Ofícios'; if (b) b.textContent = retorno ? '← Elogios' : '← Modelos'; }
   /* Cabeçalho padrão (Ofício Circular nº 022/2025/GCG) */
   const CAB_PMTO = 'POLÍCIA MILITAR DO ESTADO DO TOCANTINS', BAN_W = 10.5 * 28.3465;
   const ehCabPadrao = t => /^(ESTADO DO TOCANTINS|GOVERNO DO (ESTADO|TOCANTINS)( DO TOCANTINS)?|TOCANTINS|POLICIA MILITAR( DO ESTADO)?( DO TOCANTINS)?|PMTO|PM ?TO)$/.test(norm(String(t || '').replace(/\*\*/g, '')).replace(/[.\s]+$/, ''));
@@ -1164,7 +1167,8 @@ function renderListaOficios(){
       el('button', {class: 'btn peq', text: 'Abrir', onclick: () => abrirOficio(o.id)})));
   });
 }
-function novoOficio(iModelo){
+function novoOficio(iModelo){ const o = novoOficioSemAbrir(iModelo); if (o) abrirOficio(o.id); }
+function novoOficioSemAbrir(iModelo){
   const M = db.manualRedacao, m = M.modelos[iModelo]; if (!m) return;
   const ult = (db.oficios || []).filter(x => x.autorId === P.perfilId).sort((a, b) => (b.alteradoEm || '').localeCompare(a.alteradoEm || ''))[0]?.campos;
   const base = ult || OF_PADRAO;
@@ -1185,7 +1189,7 @@ function novoOficio(iModelo){
   c.numero = proximoNumeroOf(c);
   const o = {id: uid(), autorId: P.perfilId, autor: perfilAtual().nome || '', criadoEm: new Date().toISOString(), alteradoEm: new Date().toISOString(), campos: c, modeloIdx: iModelo};
   db.oficios.push(o); registrar('oficio', `começou o ${epigrafeOf(c)} (${NOME_MODELO(m.titulo)})`); agendarSalvar();
-  abrirOficio(o.id);
+  return o;
 }
 function abrirOficio(id){ ofAtualId = id; ofUltimoLayout = null; renderOficios(); $('.conteudo').scrollTop = 0; }
 function exemploNoOficio(){
@@ -1337,7 +1341,7 @@ function excluirOficio(){
   ofAtualId = null; agendarSalvar(); renderOficios();
 }
 $('#of-man-arq').onchange = e => { const f = e.target.files[0]; e.target.value = ''; importarManualRedacao(f); };
-$('#of-voltar').onclick = () => { ofAtualId = null; renderOficios(); };
+$('#of-voltar').onclick = () => { ofAtualId = null; if (voltarRetorno()) return; renderOficios(); };
 $('#of-pdf').onclick = gerarPdfOficio;
 $('#of-excluir').onclick = excluirOficio;
 $('#of-exemplo').onclick = exemploNoOficio;
@@ -2001,6 +2005,11 @@ function renderDocM(){
     el('button', {class: 'btn peq', text: 'Abrir', onclick: () => { dmAtualId = x.id; dmUltimo = null; renderDocM(); }}))));
 }
 function novoDocM(idModelo){
+  const o = montarDocM(idModelo); if (!o) return;
+  db.docsManual.push(o); registrar('docm', `começou um documento: ${tituloModelo(o.modelo)}`); agendarSalvar();
+  dmAtualId = o.id; dmUltimo = null; renderDocM(); $('.conteudo').scrollTop = 0;
+}
+function montarDocM(idModelo){
   const d = /^p\d+$/.test(idModelo) ? procModelos().find(x => x.id === idModelo) : db.manualRedacao?.docs?.find(x => x.id === idModelo); if (!d) return;
   const blocos = JSON.parse(JSON.stringify(d.blocos));
   // cabeçalho: as linhas da unidade logo abaixo do brasão passam a ser as da sua unidade
@@ -2016,9 +2025,7 @@ function novoDocM(idModelo){
     const novas = [ult.cab1, ult.cab2].filter(x => (x || '').trim());
     if (cab.length && novas.length){ cab.forEach((b, k) => { b.txt = novas[k] ?? ''; }); if (novas.length > cab.length){ const i = blocos.indexOf(cab[cab.length - 1]); blocos.splice(i + 1, 0, {...cab[cab.length - 1], txt: novas[cab.length]}); } }
   }
-  const o = {id: uid(), modelo: d.titulo, modeloId: d.id, cat: d.cat || catDe(d.titulo), autorId: P.perfilId, autor: perfilAtual().nome || '', criadoEm: new Date().toISOString(), alteradoEm: new Date().toISOString(), blocos};
-  db.docsManual.push(o); registrar('docm', `começou um documento: ${tituloModelo(d.titulo)}`); agendarSalvar();
-  dmAtualId = o.id; dmUltimo = null; renderDocM(); $('.conteudo').scrollTop = 0;
+  return {id: uid(), modelo: d.titulo, modeloId: d.id, cat: d.cat || catDe(d.titulo), autorId: P.perfilId, autor: perfilAtual().nome || '', criadoEm: new Date().toISOString(), alteradoEm: new Date().toISOString(), blocos};
 }
 function mudouDocM(o, prev = true){ o.alteradoEm = new Date().toISOString(); agendarSalvar(); if (prev) agendarPreviaDocM(); }
 const incRotulo = r => { if (!r) return r; let m;
@@ -2121,7 +2128,7 @@ async function gerarPdfDocM(){
     status(salvo ? `PDF baixado e salvo em documentos/${tituloModelo(o.modelo)}` : 'PDF baixado', 'ok');
   } catch (e){ console.error(e); alert('Erro ao gerar o PDF: ' + e.message); status('Erro ao gerar o PDF', 'err'); }
 }
-$('#dm-voltar').onclick = () => { dmAtualId = null; renderDocM(); };
+$('#dm-voltar').onclick = () => { dmAtualId = null; if (voltarRetorno()) return; renderDocM(); };
 $('#dm-pdf').onclick = gerarPdfDocM;
 $('#dm-duplicar').onclick = () => { const o = dmAtual(); if (!o) return; const c = JSON.parse(JSON.stringify(o)); Object.assign(c, {id: uid(), autorId: P.perfilId, autor: perfilAtual().nome || '', criadoEm: new Date().toISOString(), alteradoEm: new Date().toISOString()}); delete c.ultimoPdf; db.docsManual.push(c); agendarSalvar(); dmAtualId = c.id; renderDocM(); };
 $('#dm-restaurar').onclick = () => { const o = dmAtual(), d = modeloDoc(o); if (!o || !d || !confirm('Voltar ao texto original do modelo do manual? O que você escreveu neste documento será substituído.')) return; o.blocos = JSON.parse(JSON.stringify(d.blocos)); mudouDocM(o, false); renderEditorDocM(); };
@@ -2712,10 +2719,52 @@ $('#of-importar').onclick = () => pedirArquivoPronto('oficio');
 $('#os-importar').onclick = () => pedirArquivoPronto('os');
 $('#dm-importar').onclick = () => pedirArquivoPronto('docm');
   return {
-    setView: v => { viewAtual = v; if (/^dm-/.test(v)){ if (dmCat !== v.slice(3)) dmAtualId = null; dmCat = v.slice(3); } },
+    setView: v => { viewAtual = v; if (!v && retorno){ retorno = null; rotuloVoltar(); } if (/^dm-/.test(v)){ if (dmCat !== v.slice(3)) dmAtualId = null; dmCat = v.slice(3); } },
     renderOficios, renderOS, renderDocM,
     fechar: () => { ofAtualId = null; osAtualId = null; dmAtualId = null; },
     recarregarProc: () => { procCache = null; },
-    CAT_DOCM, CAT_PROC
+    CAT_DOCM, CAT_PROC,
+    // usado pela tela Elogios (src/elogios/documentos.js)
+    doc: {
+      manual: () => db.manualRedacao,
+      minha: () => (db.oficios || []).filter(x => x.autorId === P.perfilId).sort((a, b) => (b.alteradoEm || '').localeCompare(a.alteradoEm || ''))[0]?.campos || null,
+      base: () => (db.oficios || []).filter(x => x.autorId === P.perfilId).sort((a, b) => (b.alteradoEm || '').localeCompare(a.alteradoEm || ''))[0]?.campos || OF_PADRAO,
+      novoOficio(campos){
+        const M = db.manualRedacao; if (!M?.modelos?.length) throw new Error('O Manual de Redação ainda não foi carregado.');
+        const i = Math.max(0, M.modelos.findIndex(m => /MILITAR/i.test(m.titulo) && m.tipo !== 'circular'));
+        const o = novoOficioSemAbrir(i);
+        Object.assign(o.campos, campos); if (!campos.numero) o.campos.numero = proximoNumeroOf(o.campos, o.id);
+        agendarSalvar(); return o;
+      },
+      novoDocM(idModelo, montar){
+        const o = montarDocM(idModelo); if (!o) throw new Error('Modelo não encontrado no Manual de Redação: ' + idModelo);
+        padronizarCabecalho(o);
+        o.blocos = montar(o.blocos) || o.blocos;
+        db.docsManual.push(o); agendarSalvar(); return o;
+      },
+      modelo: id => db.manualRedacao?.docs?.find(x => x.id === id),
+      docsM: () => (db.docsManual || []).filter(x => x.autorId === P.perfilId),
+      achar: (tipo, id) => (tipo === 'oficio' ? db.oficios : db.docsManual).find(x => x.id === id),
+      remover(tipo, id){ const k = tipo === 'oficio' ? 'oficios' : 'docsManual'; db[k] = db[k].filter(x => x.id !== id); agendarSalvar(); },
+      // abre no editor; "voltar" retorna para a tela de origem
+      abrir(tipo, id, origem){
+        retorno = origem || null; rotuloVoltar();
+        if (tipo === 'oficio'){ ofAtualId = id; ofUltimoLayout = null; irPara('oficio'); }
+        else { const o = db.docsManual.find(x => x.id === id); dmCat = o?.cat || dmCat; dmAtualId = id; dmUltimo = null; irPara('dm-' + dmCat); }
+      },
+      soltar(){ retorno = null; rotuloVoltar(); },
+      pdfOficio: async o => (await gerarBytesOficio(o)).bytes,
+      pdfDocM: async o => { padronizarCabecalho(o); const r = await gerarBytesDocM(o); return r.bytes || r; },
+      nomeOficio: o => nomeArquivoOf(o.campos), epigrafe: c => epigrafeOf(c), nomeDocM,
+      conferirOficio: o => conferirOficio(o),
+      // ofício pronto (PDF/Word): o texto corrido e um ofício novo no padrão do manual com o conteúdo do arquivo
+      async importarOficio(file){
+        const arq = await lerArquivoPronto(file);
+        const texto = arq.pars.filter(p => p.txt).map(p => p.txt).join('\n');
+        const o = novoOficioSemAbrir(Math.max(0, db.manualRedacao.modelos.findIndex(m => /MILITAR/i.test(m.titulo) && m.tipo !== 'circular')));
+        o.campos.ov = {}; importarParaOficio(arq.pars, o.campos); o.alteradoEm = new Date().toISOString(); agendarSalvar();
+        return {texto, oficio: o};
+      }
+    }
   };
 }

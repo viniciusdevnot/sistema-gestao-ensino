@@ -15,6 +15,7 @@ export function Sprite(){
   <symbol id="i-user" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" strokeWidth="2" d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-8 9c0-4 4-6 8-6s8 2 8 6"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" strokeWidth="2.5" d="m15 6-6 6 6 6"/></symbol>
   <symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" strokeWidth="2" d="M3 6h18M3 12h18M3 18h18"/></symbol>
+  <symbol id="i-estrela" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/></symbol>
   <symbol id="i-livro" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" strokeWidth="2" d="M4 5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2V5Zm0 16a2 2 0 0 1 2-2h14"/></symbol>
   <symbol id="i-relogio" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" strokeWidth="2" d="M12 7v5l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></symbol>
   <symbol id="i-pasta" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" strokeWidth="2" d="M3 6h6l2 2h10v11H3z"/></symbol>
