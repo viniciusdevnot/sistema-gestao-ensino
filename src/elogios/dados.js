@@ -36,6 +36,6 @@ export async function comandantes(){
 export async function contarPendentes(perfil, ehAdmin){
   const autoriza = ehAdmin || perfil?.funcao === 'cmt_btl' || perfil?.funcao === 'subcmt_btl';
   let q = sb.from('elogios').select('id', { count: 'exact', head: true });
-  q = autoriza ? q.eq('situacao', 'solicitado') : q.eq('autor_id', perfil?.id).in('situacao', ['rascunho', 'devolvido']);
+  q = autoriza ? q.eq('situacao', 'solicitado') : perfil?.secao === 'p1' && !perfil?.funcao ? q.eq('situacao', 'autorizado') : q.eq('autor_id', perfil?.id).in('situacao', ['rascunho', 'devolvido']);
   const { count, error } = await q; return error ? 0 : (count || 0);
 }

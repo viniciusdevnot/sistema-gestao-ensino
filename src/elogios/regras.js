@@ -10,6 +10,7 @@ export const FUNCOES = {
   cmt_cia: 'Comandante de Companhia',
   cpu: 'CPU (Coordenador de Policiamento da Unidade)'
 };
+export const SECOES = { '': 'Nenhuma', p1: 'P1 – Pessoal (recebe os elogios para publicar no boletim)', p2: 'P2', p3: 'P3', p4: 'P4', p5: 'P5', p6: 'P6', p7: 'P7' };
 export const ehAutorizador = f => f === 'cmt_btl' || f === 'subcmt_btl';
 
 export const SITUACOES = {

@@ -51,7 +51,7 @@ function Lista({ lista, cmts, abrir, criar }){
   const [f, setF] = useState({ tipo: '', sit: '', per: 'ano', busca: '' });
   const [importando, setImportando] = useState(false);
   const inp = useRef(), inpBo = useRef();
-  const autoriza = ehAdmin || R.ehAutorizador(perfil?.funcao);
+  const autoriza = ehAdmin || R.ehAutorizador(perfil?.funcao), p1 = ehAdmin || perfil?.secao === 'p1', solicita = ehAdmin || !!perfil?.funcao;
   const hoje = R.hojeISO();
   const filtrada = useMemo(() => lista.filter(e => {
     if (f.tipo && e.tipo !== f.tipo) return false;
@@ -112,19 +112,22 @@ function Lista({ lista, cmts, abrir, criar }){
   return (
     <section className="view ativa el">
       <div className="el-acoes">
+        {solicita && <>
         <button className="btn pri" onClick={() => novo()}>＋ Novo pedido de elogio / referência</button>
         <button className="btn" disabled={importando} onClick={() => inp.current.click()}>{importando ? <><span className="spinner" /> Lendo…</> : 'Importar ofício já feito (Word ou PDF)'}</button>
-        <button className="btn" disabled={importando} onClick={() => inpBo.current.click()}>Importar boletim de ocorrência (PDF)</button>
+        <button className="btn" disabled={importando} onClick={() => inpBo.current.click()}>Importar boletim de ocorrência (PDF)</button></>}
+        {!solicita && p1 && <b className="el-tit">P1 – Seção de Pessoal: elogios autorizados pelo Comando para lançar no boletim</b>}
         <input ref={inp} type="file" hidden accept=".pdf,.docx" onChange={e => { importar(e.target.files[0]); e.target.value = ''; }} />
         <input ref={inpBo} type="file" hidden accept=".pdf" onChange={e => { importarBo(e.target.files[0]); e.target.value = ''; }} />
         <span className="esp" />
         <span className="tg ef" title="A Portaria nº 017/2014-GCG foi revogada (art. 21)">{R.NORMA}</span>
       </div>
       <div className="kpis el-kpis">
-        <Kpi ic="✍" v={n(['rascunho', 'devolvido'])} l="Rascunhos e devolvidos" />
-        <Kpi ic="⚖" v={n(['solicitado'])} l={autoriza ? 'Aguardando a sua autorização' : 'Aguardando o Cmt do BTL'} ouro={autoriza && n(['solicitado']) > 0} />
-        <Kpi ic="★" v={n(['autorizado', 'publicado'])} l="Autorizados / publicados" />
-        <Kpi ic="⏱" v={fora} l={`Pendentes há mais de ${R.PRAZO_DIAS} dias do fato`} />
+        {solicita && <Kpi ic="✍" v={n(['rascunho', 'devolvido'])} l="Rascunhos e devolvidos" />}
+        {solicita && <Kpi ic="⚖" v={n(['solicitado'])} l={autoriza ? 'Aguardando a sua autorização' : 'Aguardando o Cmt do BTL'} ouro={autoriza && n(['solicitado']) > 0} />}
+        <Kpi ic="📋" v={n(['autorizado'])} l={p1 && !ehAdmin ? 'Para você publicar no boletim' : 'Autorizados · aguardando a P1 publicar'} ouro={p1 && n(['autorizado']) > 0} />
+        <Kpi ic="★" v={n(['publicado'])} l="Publicados" />
+        {solicita && <Kpi ic="⏱" v={fora} l={`Pendentes há mais de ${R.PRAZO_DIAS} dias do fato`} />}
       </div>
       <div className="card">
         <h3>Controle de elogios e referências elogiosas</h3>
@@ -139,7 +142,7 @@ function Lista({ lista, cmts, abrir, criar }){
             <thead><tr><th>Fato</th><th>Tipo</th><th>Policial(is)</th><th>Solicitante</th><th>Situação</th><th></th></tr></thead>
             <tbody>{filtrada.map(e => <LinhaPedido key={e.id} e={e} abrir={() => abrir(e.id)} />)}</tbody>
           </table></div>}
-        <p className="dica">{autoriza ? 'Você vê os pedidos enviados por todos os comandantes imediatos e os seus.' : 'Você vê os seus pedidos. A conferência de “elogio repetido pelo mesmo fato” olha os pedidos de todos os usuários.'}</p>
+        <p className="dica">{!solicita && p1 ? 'Aqui chegam os elogios autorizados pelo Cmt do BTL: abra, baixe os documentos ou leve o item para um boletim, e marque como publicado quando sair.' : autoriza ? 'Você vê os pedidos enviados por todos os comandantes imediatos e os seus.' : 'Você vê os seus pedidos. A conferência de “elogio repetido pelo mesmo fato” olha os pedidos de todos os usuários.'}</p>
       </div>
     </section>
   );
@@ -399,6 +402,7 @@ function PassoOficio({ e, muda, setE, gravar, conf, autoriza, enviar }){
 /* ================= acompanhar / autorizar / publicar ================= */
 function Acompanhar({ e, conf, autoriza, souAutor, mudaSituacao, gravar, setE }){
   const { perfil, ehAdmin, avisar } = useSessao();
+  const p1 = ehAdmin || perfil?.secao === 'p1';
   const [dlg, setDlg] = useState(null);
   const [pub, setPub] = useState({ numero: e.publicacao?.numero || '', data: e.publicacao?.data || R.hojeISO() });
   const ofLocal = DOC.acharDoc('oficio', e.oficio?.id);
@@ -426,17 +430,19 @@ function Acompanhar({ e, conf, autoriza, souAutor, mudaSituacao, gravar, setE })
             <button className="btn perigo" onClick={() => setDlg('devolver')}>Devolver para ajuste</button><span className="esp" />
             <button className="btn ouro" onClick={() => setDlg('autorizar')}>Autorizar e encaminhar para publicação →</button></div>}
           {e.situacao === 'solicitado' && !autoriza && <p className="dica">Enviado ao Cmt do BTL. Você recebe de volta aqui se ele devolver para ajuste.</p>}
-          {e.situacao === 'autorizado' && (autoriza || ehAdmin) && <div className="el-pub">
+          {e.situacao === 'autorizado' && p1 && <LancarNoBoletim e={e} gravar={gravar} setE={setE} item={item} />}
+          {e.situacao === 'autorizado' && p1 && <div className="el-pub">
             <div className="el-sub">Publicação — {e.publicacao?.boletim === 'BG' ? 'Boletim Geral' : `Boletim Interno${e.publicacao?.unidade ? ' do ' + e.publicacao.unidade : ''}`}</div>
             <div className="el-campos">
               <label>Nº do {e.publicacao?.boletim || 'BI'}<input value={pub.numero} placeholder="44/2026" onChange={x => setPub({ ...pub, numero: x.target.value })} /></label>
               <label>Data da publicação<input type="date" value={pub.data} onChange={x => setPub({ ...pub, data: x.target.value })} /></label>
-              <label className="l2" style={{ alignSelf: 'end' }}><button className="btn pri" disabled={!pub.numero.trim()} onClick={() => mudaSituacao('publicado', `registrou a publicação no ${e.publicacao?.boletim} nº ${pub.numero}`, n => { n.publicacao = { ...n.publicacao, ...pub }; })}>Marcar como publicado</button></label>
+              <label className="l2" style={{ alignSelf: 'end' }}><button className="btn pri" disabled={!pub.numero.trim()} onClick={() => mudaSituacao('publicado', `registrou a publicação no ${e.publicacao?.boletim} nº ${pub.numero}`, n => { n.publicacao = { ...n.publicacao, ...pub, por: quem(perfil) }; })}>Marcar como publicado</button></label>
             </div>
           </div>}
-          {e.situacao === 'autorizado' && !autoriza && <p className="dica">Autorizado pelo Cmt do BTL. Falta a publicação no boletim.</p>}
+          {e.situacao === 'autorizado' && !p1 && <p className="dica"><b>Autorizado.</b> A P1 – Seção de Pessoal recebeu o ofício, o despacho e o item para lançar no boletim. Quando ela publicar, a situação muda aqui para “Publicado”.</p>}
           {e.situacao === 'publicado' && <p className="dica"><b>Publicado no {e.publicacao?.boletim} nº {e.publicacao?.numero}</b> em {R.dataBR(e.publicacao?.data)}.{e.averbar ? ' O setor de pessoal da unidade faz a averbação nos assentamentos (art. 17).' : ''}</p>}
-          {e.situacao === 'publicado' && (autoriza || ehAdmin) && <button className="btn peq" onClick={() => { if (confirm('Voltar a situação para “Autorizado · falta publicar”?')) mudaSituacao('autorizado', 'desfez o registro de publicação'); }}>Desfazer “publicado”</button>}
+          {e.situacao === 'publicado' && e.publicacao?.por && <p className="dica" style={{ marginTop: 0 }}>Publicação registrada por {e.publicacao.por}.</p>}
+          {e.situacao === 'publicado' && p1 && <button className="btn peq" onClick={() => { if (confirm('Voltar a situação para “Autorizado · falta publicar”?')) mudaSituacao('autorizado', 'desfez o registro de publicação'); }}>Desfazer “publicado”</button>}
         </div>
         {docs.length > 0 && <div className="card" style={{ marginTop: 16 }}>
           <div className="el-abas">{docs.map((d, k) => <span key={d[0]} className={k === aba ? 'on' : ''} onClick={() => setAba(k)}>{d[1]}</span>)}</div>
@@ -614,5 +620,31 @@ function GuarnicaoBo({ e, muda }){
       <span><b>{[p.posto, p.matricula].filter(Boolean).join(' ')}</b> {p.nome}<small>{p.funcaoGu}</small></span>
       {ja ? <span className="tg lib">✓ no pedido</span> : <button className="btn peq" onClick={() => incluir(p)}>＋ Incluir</button>}
     </div>; })}
+  </div>;
+}
+
+/* P1: levar o Item para Boletim a um boletim novo ou a um boletim já começado (documentos da própria P1) */
+function LancarNoBoletim({ e, gravar, setE, item }){
+  const { perfil, avisar, registrar } = useSessao();
+  const [lista] = useState(() => { try { return DOC.meusBoletins(); } catch { return []; } });
+  const [sel, setSel] = useState(lista[0]?.id || '');
+  if (!item) return null;
+  const marcar = async (o, acao) => {
+    const n = clone(e); n.publicacao = { ...n.publicacao, lancadoEm: { id: o.id, nome: DOC.nomeDoc('docm', o).replace(/\.pdf$/, ''), em: new Date().toISOString(), por: quem(perfil) } };
+    n.historico = [...(n.historico || []), { em: new Date().toISOString(), por: quem(perfil), acao }];
+    setE(n); try { await gravar(n, true); } catch {}
+    registrar('elogio', acao); DOC.abrirNoEditor('docm', o.id);
+  };
+  const novo = () => { try { const o = DOC.novoBoletimComItem(e, item); avisar('Boletim começado com o item do elogio'); marcar(o, 'começou um boletim com o item do elogio'); } catch (er){ alert(er.message); } };
+  const juntar = () => { try { const o = DOC.juntarAoBoletim(sel, e, item); avisar('Item juntado ao boletim'); marcar(o, 'juntou o item do elogio a um boletim'); } catch (er){ alert(er.message); } };
+  return <div className="el-pub el-lancar">
+    <div className="el-sub">Lançar no boletim (P1)</div>
+    <p className="dica" style={{ margin: '0 0 10px' }}>O texto do Item para {e.publicacao?.boletim || 'BI'} entra na 4ª parte do boletim (Justiça e Disciplina), abaixo de “{e.tipo === 'elogio' ? 'ELOGIO' : 'REFERÊNCIA ELOGIOSA'}”. Você também pode só baixar os PDFs abaixo e juntar ao boletim como preferir.</p>
+    {e.publicacao?.lancadoEm && <p className="dica" style={{ margin: '0 0 10px' }}>Já lançado em <b>{e.publicacao.lancadoEm.nome}</b> por {e.publicacao.lancadoEm.por}.</p>}
+    <div className="el-dir-acoes">
+      <button className="btn pri" onClick={novo}>Iniciar um novo boletim com este item</button>
+      {lista.length > 0 && <><select value={sel} onChange={x => setSel(x.target.value)}>{lista.map(b => <option key={b.id} value={b.id}>{DOC.nomeDoc('docm', b).replace(/\.pdf$/, '')} · {new Date(b.alteradoEm).toLocaleDateString('pt-BR')}</option>)}</select>
+        <button className="btn" disabled={!sel} onClick={juntar}>Juntar a este boletim</button></>}
+    </div>
   </div>;
 }

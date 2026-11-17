@@ -100,3 +100,46 @@ export function baseUnidade(perfil){
   if (m) return m;
   return { ...b, sigNome: perfil?.nome || '', sigGuerra: [], sigPosto: perfil?.posto || '', sigFuncao: '' };
 }
+
+/* ---------- P1: levar o Item para Boletim para um boletim (modelo “Boletim” do Manual de Redação) ---------- */
+export const MODELO_BOLETIM = 'm22';
+const plano = b => String(b?.txt || '').replace(/\*\*|\+\+/g, '').trim();
+const ehBoletim = o => o.modeloId === MODELO_BOLETIM || /^BOLETIM$/i.test(String(o.modelo || '').trim());
+export const meusBoletins = () => D().docsM().filter(ehBoletim).sort((a, b) => (b.alteradoEm || '').localeCompare(a.alteradoEm || ''));
+// parágrafos do item (a), b), – …) que vão para dentro do boletim
+function paragrafosDoItem(item){ return (item?.blocos || []).filter(b => b.t === 'p' && !b.img && b.rot && plano(b)).map(b => JSON.parse(JSON.stringify(b))); }
+/* coloca o texto do item na 4ª parte do boletim, abaixo de “ELOGIO” ou “REFERÊNCIA ELOGIOSA”; sem esse título, no fim, antes da assinatura */
+function inserir(blocos, e, item){
+  const ps = paragrafosDoItem(item); if (!ps.length) throw new Error('O Item para Boletim deste pedido está vazio.');
+  const re = e.tipo === 'elogio' ? /^ELOGIOS?$/i : /^REFER[ÊE]NCIAS? ELOGIOSAS?$/i;
+  let i = blocos.findIndex(b => b.t === 'p' && re.test(plano(b)));
+  let base;
+  if (i >= 0){
+    base = blocos[i];
+    // depois dos parágrafos que já estão nesse título (até o próximo título numerado “2.”, “3.”… ou parte)
+    let j = i + 1;
+    while (j < blocos.length && blocos[j].t === 'p' && !( /^\d+\.$/.test(blocos[j].rot || '') && (blocos[j].il || 0) <= (base.il || 0)) && !/^\*\*\+\+/.test(String(blocos[j].txt || '').trim()) && plano(blocos[j]) !== 'Assinatura digital') j++;
+    const ja = blocos.slice(i + 1, j).filter(b => /^[a-z]\)$/.test(b.rot || '')).length;
+    let n = ja;
+    const novos = ps.map(b => ({ ...b, il: (base.il || 0) + 426, fl: -426, rot: /^[a-z]\)$/.test(b.rot || '') ? String.fromCharCode(97 + n++) + ')' : b.rot, sb: 0, sa: 6 }));
+    // tira um parágrafo vazio do modelo logo abaixo do título, se houver
+    blocos.splice(j, 0, ...novos);
+  } else {
+    const k = blocos.findIndex(b => plano(b) === 'Assinatura digital');
+    const titulo = { ...(ps[0]), rot: '', il: 0, fl: 0, txt: e.tipo === 'elogio' ? '++ELOGIO++' : '++REFERÊNCIA ELOGIOSA++' };
+    blocos.splice(k >= 0 ? k : blocos.length, 0, titulo, ...ps);
+  }
+  return blocos;
+}
+export function novoBoletimComItem(e, item){
+  const ano = new Date().getFullYear(), BI = e.publicacao?.boletim !== 'BG';
+  return D().novoDocM(MODELO_BOLETIM, bl => {
+    const t = bl.find(b => b.t === 'p' && /^BOLETIM (GERAL|INTERNO)\s+N[º°]/i.test(plano(b)));
+    if (t) t.txt = `**BOLETIM ${BI ? 'INTERNO' : 'GERAL'} Nº ___/${ano}${BI && e.publicacao?.unidade ? ' – ' + e.publicacao.unidade : ''}**`;
+    return inserir(bl, e, item);
+  });
+}
+export function juntarAoBoletim(id, e, item){
+  const o = D().achar('docm', id); if (!o) throw new Error('Boletim não encontrado entre os seus documentos.');
+  inserir(o.blocos, e, item); D().salvar(o); return o;
+}

@@ -177,6 +177,7 @@ rod = '''
       },
       modelo: id => db.manualRedacao?.docs?.find(x => x.id === id),
       docsM: () => (db.docsManual || []).filter(x => x.autorId === P.perfilId),
+      salvar(o){ if (o) o.alteradoEm = new Date().toISOString(); agendarSalvar(); },
       achar: (tipo, id) => (tipo === 'oficio' ? db.oficios : db.docsManual).find(x => x.id === id),
       remover(tipo, id){ const k = tipo === 'oficio' ? 'oficios' : 'docsManual'; db[k] = db[k].filter(x => x.id !== id); agendarSalvar(); },
       // abre no editor; "voltar" retorna para a tela de origem

@@ -3,7 +3,7 @@ import * as api from '../lib/api.js';
 import { useSessao } from '../contexto/Sessao.jsx';
 import { CamposPerfil, Avatar } from './Acesso.jsx';
 import { validaSenha, dataHora, POSTO_OFICIAL, SENHA_MIN } from '../lib/util.js';
-import { FUNCOES } from '../elogios/regras.js';
+import { FUNCOES, SECOES } from '../elogios/regras.js';
 
 const catDe = p => p?.categoria || (POSTO_OFICIAL.test(p?.posto || '') ? 'oficial' : 'praca');
 
@@ -62,7 +62,7 @@ function AdminUsuarios(){
     try { await api.excluirPerfilAdmin(p.id); registrar('perfil', `excluiu o usuário ${p.nome} (${p.usuario})`); carregar(); } catch (e){ alert(e.message); }
   };
   const salvarEdicao = async () => {
-    try { await api.salvarPerfil(editando.id, { nome: editando.nome, posto: editando.posto, setor: editando.setor, categoria: editando.categoria, papel: editando.papel, ...('funcao' in editando ? { funcao: editando.funcao || '' } : {}) }); registrar('perfil', `editou o perfil de ${editando.nome}`); setEditando(null); carregar(); }
+    try { await api.salvarPerfil(editando.id, { nome: editando.nome, posto: editando.posto, setor: editando.setor, categoria: editando.categoria, papel: editando.papel, ...('funcao' in editando ? { funcao: editando.funcao || '' } : {}), ...('secao' in editando ? { secao: editando.secao || '' } : {}) }); registrar('perfil', `editou o perfil de ${editando.nome}`); setEditando(null); carregar(); }
     catch (e){ alert(e.message); }
   };
   return (
@@ -81,7 +81,7 @@ function AdminUsuarios(){
           <div className="linha" key={p.id}>
             <Avatar perfil={p} tam={36} />
             <div className="nm"><b>{p.nome}{p.papel === 'admin' ? ' · ADMIN' : ''}</b>
-              <small>{['usuário ' + p.usuario, catDe(p) === 'oficial' ? 'Oficial' : 'Praça', p.posto, p.setor, p.funcao && FUNCOES[p.funcao]].filter(Boolean).join(' · ')}{p.trocar_senha ? ' · senha provisória' : ''}{p.ultimo_acesso ? ' · último acesso ' + dataHora(p.ultimo_acesso) : ''}</small></div>
+              <small>{['usuário ' + p.usuario, catDe(p) === 'oficial' ? 'Oficial' : 'Praça', p.posto, p.setor, p.funcao && FUNCOES[p.funcao], p.secao && p.secao.toUpperCase()].filter(Boolean).join(' · ')}{p.trocar_senha ? ' · senha provisória' : ''}{p.ultimo_acesso ? ' · último acesso ' + dataHora(p.ultimo_acesso) : ''}</small></div>
             <button className="btn peq" onClick={() => setEditando({ ...p, categoria: catDe(p) })}>Editar</button>
             <button className="btn peq" onClick={() => redefinir(p)}>Redefinir senha</button>
             {p.id !== eu.id && <button className="btn peq perigo" onClick={() => excluir(p)}>Excluir</button>}
@@ -97,7 +97,11 @@ function AdminUsuarios(){
           {'funcao' in editando
             ? <select value={editando.funcao || ''} onChange={e => setEditando({ ...editando, funcao: e.target.value })}>{Object.entries(FUNCOES).map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>
             : <p className="dica">Rode o arquivo <b>supabase/003_elogios.sql</b> no Supabase para poder definir a função.</p>}
-          <p className="dica" style={{ marginTop: 4 }}>Quem tem função vê o menu Elogios. Só o Comandante e o Subcomandante do BTL autorizam.</p>
+          <label>Seção do Estado-Maior</label>
+          {'secao' in editando
+            ? <select value={editando.secao || ''} onChange={e => setEditando({ ...editando, secao: e.target.value })}>{Object.entries(SECOES).map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>
+            : <p className="dica">Rode o arquivo <b>supabase/004_secoes_p1.sql</b> no Supabase para poder definir a seção.</p>}
+          <p className="dica" style={{ marginTop: 4 }}>Quem tem função de comando ou é da P1 vê o menu Elogios. Só o Comandante e o Subcomandante do BTL autorizam; só a P1 marca como publicado.</p>
           <div className="tp-acoes"><button className="btn" onClick={() => setEditando(null)}>Cancelar</button><button className="btn pri" onClick={salvarEdicao}>Salvar</button></div>
         </div>)}
     </div>

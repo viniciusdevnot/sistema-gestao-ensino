@@ -55,7 +55,7 @@ export default function Layout({ view, ir, titulo, sub, tags = {}, abrirGuia, ch
             {CAT_PROC.map(([k, n, g]) => { const cab = g !== grupo ? (grupo = g, <div className="sub-grupo" key={'g' + k}>{g}</div>) : null; return [cab, sub2('dm-' + k, n, 'balanca')]; })}
           </div>}
         </>}
-        {(ehAdmin || perfil?.funcao) && item('elogios', 'Elogios', 'estrela', tags.elogios ?? 0)}
+        {(ehAdmin || perfil?.funcao || perfil?.secao === 'p1') && item('elogios', 'Elogios', 'estrela', tags.elogios ?? 0)}
         {item('planilhas', 'Planilhas', 'tabela', tags.planilhas ?? 0)}
         <div className="grupo">Sistema</div>
         <a href="#" className="nav-guia" title="Guia do sistema" onClick={e => { e.preventDefault(); setMenuAberto(false); abrirGuia?.(); }}><Ic n="livro" t={20} /><span>Guia do sistema</span></a>
