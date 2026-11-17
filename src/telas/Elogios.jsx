@@ -50,7 +50,7 @@ function Lista({ lista, cmts, abrir, criar }){
   const { perfil, ehAdmin, registrar, avisar } = useSessao();
   const [f, setF] = useState({ tipo: '', sit: '', per: 'ano', busca: '' });
   const [importando, setImportando] = useState(false);
-  const inp = useRef(), inpBo = useRef();
+  const [dlgImp, setDlgImp] = useState(false);
   const autoriza = ehAdmin || R.ehAutorizador(perfil?.funcao), p1 = ehAdmin || perfil?.secao === 'p1', solicita = ehAdmin || !!perfil?.funcao;
   const hoje = R.hojeISO();
   const filtrada = useMemo(() => lista.filter(e => {
@@ -74,39 +74,37 @@ function Lista({ lista, cmts, abrir, criar }){
     try { const g = await BD.gravarElogio(e, perfil); registrar('elogio', `começou um pedido de ${R.rotuloTipo(e).toLowerCase()}`); criar(g); }
     catch (er){ alert(er.message); }
   };
-  const importar = async file => {
-    if (!file) return; setImportando(true);
-    try {
-      const d = await DOC.motorDocs({});
-      const { texto, oficio } = await d.importarOficio(file);
-      const x = R.lerOficioPronto(texto);
-      const p = R.novoPedido(perfil, DOC.baseUnidade(perfil));
-      const extra = {
-        tipo: x.tipo || p.tipo, alcance: x.alcance || p.alcance,
-        fato: { ...p.fato, ...x.fato }, policiais: x.policiais?.length ? x.policiais : p.policiais,
-        solicitante: { ...p.solicitante, ...Object.fromEntries(Object.entries(x.solicitante || {}).filter(([, v]) => v)), ...(x.oficioNumero?.setores ? { setores: x.oficioNumero.setores } : {}) },
-        destino: { ...p.destino, ...Object.fromEntries(Object.entries(x.destino || {}).filter(([, v]) => v)) },
-        oficio: { ...DOC.infoOficio(oficio), importado: file.name }
-      };
-      if (x.oficioNumero){ oficio.campos.numero = String(x.oficioNumero.numero).padStart(3, '0'); oficio.campos.ano = x.oficioNumero.ano; }
-      if (x.sgd) oficio.campos.sgd = x.sgd;
-      extra.oficio = { ...DOC.infoOficio(oficio), importado: file.name };
-      await novo(extra);
-      avisar('Ofício importado: confira os dados de cada passo');
-    } catch (er){ console.error(er); alert('Não consegui ler este ofício: ' + er.message); }
-    finally { setImportando(false); }
+  // ofício já feito (Word/PDF) → dados do pedido + o ofício no padrão do manual
+  const extraDoOficio = async (file, p) => {
+    const d = await DOC.motorDocs({});
+    const { texto, oficio } = await d.importarOficio(file);
+    const x = R.lerOficioPronto(texto);
+    if (x.oficioNumero){ oficio.campos.numero = String(x.oficioNumero.numero).padStart(3, '0'); oficio.campos.ano = x.oficioNumero.ano; }
+    if (x.sgd) oficio.campos.sgd = x.sgd;
+    return {
+      tipo: x.tipo || p.tipo, alcance: x.alcance || p.alcance,
+      fato: { ...p.fato, ...x.fato }, policiais: x.policiais?.length ? x.policiais : [],
+      solicitante: { ...p.solicitante, ...Object.fromEntries(Object.entries(x.solicitante || {}).filter(([, v]) => v)), ...(x.oficioNumero?.setores ? { setores: x.oficioNumero.setores } : {}) },
+      destino: { ...p.destino, ...Object.fromEntries(Object.entries(x.destino || {}).filter(([, v]) => v)) },
+      oficio: { ...DOC.infoOficio(oficio), importado: file.name }
+    };
   };
-  const importarBo = async file => {
-    if (!file) return; setImportando(true);
+  /* monta o pedido com o que foi escolhido: ofício (texto) e/ou boletim (dados do fato e guarnição) */
+  const montarImportado = async ({ of, bo, dBo }) => {
+    setImportando(true);
     try {
-      const d = await lerBoletim(file);
       const p = R.novoPedido(perfil, DOC.baseUnidade(perfil));
-      p.policiais = [];
-      R.aplicarBoletim(p, d, file.name);
-      if (!p.policiais.length) p.policiais = [R.novoPolicial()];
-      await novo({ fato: p.fato, boletim: p.boletim, policiais: p.policiais });
-      avisar(`Boletim lido: ${d.guarnicao.length} policial(is) na guarnição. Marque no passo 3 quem recebe o elogio.`);
-    } catch (er){ console.error(er); alert('Não consegui ler este boletim: ' + er.message); }
+      let extra = of ? await extraDoOficio(of, p) : { policiais: [] };
+      if (dBo){
+        const x = { ...p, ...extra, fato: { ...(extra.fato || p.fato) }, policiais: clone(extra.policiais || []) };
+        R.aplicarBoletim(x, dBo, bo.name);
+        extra = { ...extra, fato: x.fato, policiais: x.policiais, boletim: x.boletim };
+      }
+      if (!extra.policiais?.length) extra.policiais = [R.novoPolicial()];
+      await novo(extra);
+      setDlgImp(false);
+      avisar(of && dBo ? 'Ofício e boletim importados: confira os dados de cada passo' : of ? 'Ofício importado: confira os dados de cada passo' : `Boletim lido: marque no passo 3 quem recebe o elogio`);
+    } catch (er){ console.error(er); alert('Não consegui ler os documentos: ' + er.message); }
     finally { setImportando(false); }
   };
   return (
@@ -114,11 +112,9 @@ function Lista({ lista, cmts, abrir, criar }){
       <div className="el-acoes">
         {solicita && <>
         <button className="btn pri" onClick={() => novo()}>＋ Novo pedido de elogio / referência</button>
-        <button className="btn" disabled={importando} onClick={() => inp.current.click()}>{importando ? <><span className="spinner" /> Lendo…</> : 'Importar ofício já feito (Word ou PDF)'}</button>
-        <button className="btn" disabled={importando} onClick={() => inpBo.current.click()}>Importar boletim de ocorrência (PDF)</button></>}
+        <button className="btn" onClick={() => setDlgImp(true)}>Importar ofício e boletim de ocorrência</button></>}
         {!solicita && p1 && <b className="el-tit">P1 – Seção de Pessoal: elogios autorizados pelo Comando para lançar no boletim</b>}
-        <input ref={inp} type="file" hidden accept=".pdf,.docx" onChange={e => { importar(e.target.files[0]); e.target.value = ''; }} />
-        <input ref={inpBo} type="file" hidden accept=".pdf" onChange={e => { importarBo(e.target.files[0]); e.target.value = ''; }} />
+        {dlgImp && <DialogoImportar ocupado={importando} fechar={() => !importando && setDlgImp(false)} montar={montarImportado} />}
         <span className="esp" />
         <span className="tg ef" title="A Portaria nº 017/2014-GCG foi revogada (art. 21)">{R.NORMA}</span>
       </div>
@@ -647,4 +643,39 @@ function LancarNoBoletim({ e, gravar, setE, item }){
         <button className="btn" disabled={!sel} onClick={juntar}>Juntar a este boletim</button></>}
     </div>
   </div>;
+}
+
+/* importar os documentos do pedido: o ofício (texto do pedido) e o boletim de ocorrência (dados do fato e guarnição), um ou os dois */
+function DialogoImportar({ fechar, montar, ocupado }){
+  const [of, setOf] = useState(null), [bo, setBo] = useState(null), [dBo, setDBo] = useState(null), [lendo, setLendo] = useState(false);
+  const inpOf = useRef(), inpBo = useRef();
+  const escolherBo = async f => {
+    if (!f) return; setLendo(true); setBo(f); setDBo(null);
+    try { setDBo(await lerBoletim(f)); } catch (er){ alert('Não consegui ler este boletim: ' + er.message); setBo(null); }
+    finally { setLendo(false); }
+  };
+  const F = dBo?.fato || {};
+  return <div className="el-modal" onClick={fechar}><div className="card" onClick={ev => ev.stopPropagation()}>
+    <h3>Importar documentos do pedido</h3>
+    <p className="dica" style={{ marginTop: -6, marginBottom: 14 }}>Escolha o ofício, o boletim de ocorrência ou os dois. O pedido só é montado quando você clicar em “Montar o pedido”.</p>
+    <div className="el-imp">
+      <div className={'el-imp-c' + (of ? ' ok' : '')}>
+        <b>① Ofício de solicitação</b><small>Word (.docx) ou PDF · traz o texto: policiais, narrativa, conduta, solicitante e destinatário</small>
+        {of ? <div className="el-imp-arq">✓ {of.name} <button className="btn peq" onClick={() => setOf(null)}>Tirar</button></div>
+          : <button className="btn" onClick={() => inpOf.current.click()}>Escolher o ofício</button>}
+        <input ref={inpOf} type="file" hidden accept=".pdf,.docx" onChange={x => { setOf(x.target.files[0] || null); x.target.value = ''; }} />
+      </div>
+      <div className={'el-imp-c' + (dBo ? ' ok' : '')}>
+        <b>② Boletim de ocorrência</b><small>PDF · traz os dados do fato: protocolo, data, hora, local, natureza e a guarnição</small>
+        {lendo ? <div className="el-imp-arq"><span className="spinner" /> Lendo…</div>
+          : dBo ? <div className="el-imp-arq">✓ {bo.name} <button className="btn peq" onClick={() => { setBo(null); setDBo(null); }}>Tirar</button>
+              <small>{[dBo.protocolo && `Protocolo ${dBo.protocolo}`, F.data && R.dataBR(F.data) + (F.hora ? ' às ' + R.horaBR(F.hora) : ''), F.natureza, `${dBo.guarnicao.length} policial(is) na guarnição`].filter(Boolean).join(' · ')}</small></div>
+          : <button className="btn" onClick={() => inpBo.current.click()}>Escolher o boletim</button>}
+        <input ref={inpBo} type="file" hidden accept=".pdf" onChange={x => { escolherBo(x.target.files[0]); x.target.value = ''; }} />
+      </div>
+    </div>
+    <p className="dica">A narrativa e a conduta vêm só do ofício. O boletim completa os campos que o ofício não tiver; se os dois não baterem (data, protocolo, policiais), a conferência avisa.</p>
+    <div className="el-enviar"><button className="btn" disabled={ocupado} onClick={fechar}>Cancelar</button><span className="esp" />
+      <button className="btn pri" disabled={ocupado || lendo || (!of && !dBo)} onClick={() => montar({ of, bo, dBo })}>{ocupado ? 'Montando…' : 'Montar o pedido →'}</button></div>
+  </div></div>;
 }
